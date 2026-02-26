@@ -2,9 +2,18 @@ package com.musicstats.app.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+
+val MusicStatsShapes = Shapes(
+    small = RoundedCornerShape(8.dp),
+    medium = RoundedCornerShape(16.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(32.dp)
+)
 
 @Composable
 fun MusicStatsTheme(
@@ -19,5 +28,10 @@ fun MusicStatsTheme(
         darkTheme -> darkColorScheme()
         else -> lightColorScheme()
     }
-    MaterialTheme(colorScheme = colorScheme, content = content)
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = MusicStatsTypography,
+        shapes = MusicStatsShapes,
+        content = content
+    )
 }
