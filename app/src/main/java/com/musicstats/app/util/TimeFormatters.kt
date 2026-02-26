@@ -22,6 +22,11 @@ fun startOfWeek(): Long {
     return monday.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
 }
 
+fun startOfMonth(): Long {
+    val now = java.time.LocalDate.now().withDayOfMonth(1)
+    return now.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+}
+
 fun daysAgo(days: Int): Long {
     return java.time.LocalDate.now().minusDays(days.toLong())
         .atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()

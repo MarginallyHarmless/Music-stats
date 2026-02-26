@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.musicstats.app.ui.home.HomeScreen
 import com.musicstats.app.ui.onboarding.OnboardingScreen
+import com.musicstats.app.ui.stats.StatsScreen
 
 @Composable
 fun NavGraph(navController: NavHostController, startDestination: String, modifier: Modifier = Modifier) {
@@ -24,8 +25,7 @@ fun NavGraph(navController: NavHostController, startDestination: String, modifie
             HomeScreen()
         }
         composable("stats") {
-            // Placeholder — Task 10
-            androidx.compose.material3.Text("Stats")
+            StatsScreen()
         }
         composable("library") {
             // Placeholder — Task 11
