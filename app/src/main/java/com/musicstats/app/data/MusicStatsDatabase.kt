@@ -13,7 +13,7 @@ import com.musicstats.app.data.model.Song
 
 @Database(
     entities = [Song::class, Artist::class, ListeningEvent::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class MusicStatsDatabase : RoomDatabase() {
@@ -25,6 +25,23 @@ abstract class MusicStatsDatabase : RoomDatabase() {
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE artists ADD COLUMN imageUrl TEXT DEFAULT NULL")
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                val cursor = db.query("PRAGMA table_info(songs)")
+                var hasColumn = false
+                while (cursor.moveToNext()) {
+                    if (cursor.getString(cursor.getColumnIndexOrThrow("name")) == "albumArtUrl") {
+                        hasColumn = true
+                        break
+                    }
+                }
+                cursor.close()
+                if (!hasColumn) {
+                    db.execSQL("ALTER TABLE songs ADD COLUMN albumArtUrl TEXT DEFAULT NULL")
+                }
             }
         }
     }

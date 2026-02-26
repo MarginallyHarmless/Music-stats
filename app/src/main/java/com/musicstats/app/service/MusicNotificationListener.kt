@@ -7,6 +7,7 @@ import android.media.session.MediaSession
 import android.media.session.MediaSessionManager
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,20 +27,25 @@ class MusicNotificationListener : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        Log.d("MusicNotifListener", "onListenerConnected called")
         val manager = getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
         val componentName = ComponentName(this, MusicNotificationListener::class.java)
         val listener = MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
+            Log.d("MusicNotifListener", "onActiveSessionsChanged: ${controllers?.size} sessions")
             onSessionsChanged(controllers)
         }
         sessionsChangedListener = listener
         manager.addOnActiveSessionsChangedListener(listener, componentName)
         val controllers = manager.getActiveSessions(componentName)
+        Log.d("MusicNotifListener", "Initial active sessions: ${controllers.size}")
         onSessionsChanged(controllers)
     }
 
     private fun onSessionsChanged(controllers: List<MediaController>?) {
+        Log.d("MusicNotifListener", "onSessionsChanged: ${controllers?.size} controllers")
         controllers?.forEach { controller ->
             if (activeCallbacks.containsKey(controller.sessionToken)) return@forEach
+            Log.d("MusicNotifListener", "  Registering callback for ${controller.packageName}")
 
             val callback = object : MediaController.Callback() {
                 override fun onMetadataChanged(metadata: android.media.MediaMetadata?) {

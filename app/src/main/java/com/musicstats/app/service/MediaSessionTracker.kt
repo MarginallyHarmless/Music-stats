@@ -8,9 +8,12 @@ import com.musicstats.app.data.repository.MusicRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import android.util.Log
 import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
+
+private const val TAG = "MediaSessionTracker"
 
 class MediaSessionTracker @Inject constructor(
     private val repository: MusicRepository,
@@ -27,13 +30,16 @@ class MediaSessionTracker @Inject constructor(
 
     @Synchronized
     fun onMetadataChanged(metadata: MediaMetadata?, sourceApp: String, scope: CoroutineScope) {
+        Log.d(TAG, "onMetadataChanged from $sourceApp, metadata=${metadata != null}")
         val title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
         val artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST)
         val album = metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM)
 
+        Log.d(TAG, "  title=$title, artist=$artist")
         if (title == null || artist == null) return
 
         if (title != currentTitle || artist != currentArtist) {
+            Log.d(TAG, "  NEW track: $title by $artist")
             saveCurrentIfPlaying(scope)
             currentTitle = title
             currentArtist = artist
@@ -66,9 +72,11 @@ class MediaSessionTracker @Inject constructor(
         val wasPlaying = isPlaying
         isPlaying = state?.state == PlaybackState.STATE_PLAYING
         currentSourceApp = sourceApp
+        Log.d(TAG, "onPlaybackStateChanged from $sourceApp: state=${state?.state}, wasPlaying=$wasPlaying, isPlaying=$isPlaying, currentTitle=$currentTitle")
 
         if (isPlaying && !wasPlaying) {
             playStartTime = System.currentTimeMillis()
+            Log.d(TAG, "  Started playing at $playStartTime")
         } else if (!isPlaying && wasPlaying) {
             saveCurrentIfPlaying(scope)
         } else if (isPlaying && wasPlaying && playStartTime != null) {
@@ -89,26 +97,32 @@ class MediaSessionTracker @Inject constructor(
 
     @Synchronized
     private fun saveCurrentIfPlaying(scope: CoroutineScope) {
-        val title = currentTitle ?: return
-        val artist = currentArtist ?: return
-        val startTime = playStartTime ?: return
+        val title = currentTitle ?: run { Log.d(TAG, "  saveCurrentIfPlaying: no title"); return }
+        val artist = currentArtist ?: run { Log.d(TAG, "  saveCurrentIfPlaying: no artist"); return }
+        val startTime = playStartTime ?: run { Log.d(TAG, "  saveCurrentIfPlaying: no startTime"); return }
         val duration = System.currentTimeMillis() - startTime
 
-        if (duration < 5_000) return
+        if (duration < 5_000) { Log.d(TAG, "  saveCurrentIfPlaying: duration too short (${duration}ms)"); return }
 
         val albumArtUrl = currentAlbumArtUri ?: saveBitmapToFile(currentAlbumArtBitmap, title, artist)
 
+        Log.d(TAG, "  SAVING play: $title by $artist, duration=${duration}ms")
         scope.launch {
-            repository.recordPlay(
-                title = title,
-                artist = artist,
-                album = currentAlbum,
-                sourceApp = currentSourceApp ?: "unknown",
-                startedAt = startTime,
-                durationMs = duration,
-                completed = duration > 30_000,
-                albumArtUrl = albumArtUrl
-            )
+            try {
+                repository.recordPlay(
+                    title = title,
+                    artist = artist,
+                    album = currentAlbum,
+                    sourceApp = currentSourceApp ?: "unknown",
+                    startedAt = startTime,
+                    durationMs = duration,
+                    completed = duration > 30_000,
+                    albumArtUrl = albumArtUrl
+                )
+                Log.d(TAG, "  recordPlay SUCCESS for $title")
+            } catch (e: Exception) {
+                Log.e(TAG, "  recordPlay FAILED for $title", e)
+            }
         }
         playStartTime = null
     }

@@ -155,7 +155,7 @@ interface ListeningEventDao {
     @Query(
         """
         SELECT COUNT(DISTINCT songId) FROM listening_events
-        WHERE startedAt >= :since
+        WHERE startedAt >= :since AND completed = 1
         """
     )
     fun getSongCountSince(since: Long): Flow<Int>

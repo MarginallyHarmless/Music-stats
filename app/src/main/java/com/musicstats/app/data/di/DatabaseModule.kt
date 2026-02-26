@@ -25,7 +25,7 @@ object DatabaseModule {
             MusicStatsDatabase::class.java,
             "music_stats.db"
         )
-            .addMigrations(MusicStatsDatabase.MIGRATION_1_2)
+            .addMigrations(MusicStatsDatabase.MIGRATION_1_2, MusicStatsDatabase.MIGRATION_2_3)
             .fallbackToDestructiveMigration()
             .build()
     }
