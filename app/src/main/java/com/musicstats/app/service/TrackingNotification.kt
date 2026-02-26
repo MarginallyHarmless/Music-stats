@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import com.musicstats.app.R
 import com.musicstats.app.ui.MainActivity
 
 object TrackingNotification {
@@ -33,7 +34,7 @@ object TrackingNotification {
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle("Music Stats")
             .setContentText("Tracking your listening")
-            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setSmallIcon(R.drawable.ic_notification)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
             .build()

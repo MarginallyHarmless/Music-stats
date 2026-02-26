@@ -37,8 +37,15 @@ class ExportImportManager @Inject constructor(
         return json.encodeToString(ExportData.serializer(), data)
     }
 
+    // TODO: Import bypasses MusicRepository and writes directly to DAOs.
+    // Consider routing through repository for consistent dedup logic.
     suspend fun importFromJson(jsonString: String): ImportResult {
         val data = json.decodeFromString(ExportData.serializer(), jsonString)
+        if (data.version > 1) {
+            throw IllegalArgumentException(
+                "Unsupported export version ${data.version}. Please update the app."
+            )
+        }
         var songsImported = 0
         var eventsImported = 0
 

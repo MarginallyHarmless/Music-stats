@@ -23,8 +23,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.musicstats.app.data.model.ListeningEvent
 import com.musicstats.app.util.formatDuration
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
@@ -155,7 +156,7 @@ private fun StatBox(label: String, value: String, modifier: Modifier = Modifier)
 
 @Composable
 private fun EventItem(event: ListeningEvent) {
-    val dateFormat = SimpleDateFormat("MMM d, yyyy h:mm a", Locale.getDefault())
+    val formatter = DateTimeFormatter.ofPattern("MMM d, yyyy h:mm a", Locale.getDefault())
 
     Row(
         modifier = Modifier
@@ -166,7 +167,7 @@ private fun EventItem(event: ListeningEvent) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = dateFormat.format(Date(event.startedAt)),
+                text = Instant.ofEpochMilli(event.startedAt).atZone(ZoneId.systemDefault()).format(formatter),
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(

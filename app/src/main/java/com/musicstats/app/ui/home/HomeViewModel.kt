@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -45,6 +46,8 @@ class HomeViewModel @Inject constructor(
             .map { dailyData -> computeStreak(dailyData) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    private var topArtistJob: Job? = null
+
     init {
         refresh()
     }
@@ -54,7 +57,8 @@ class HomeViewModel @Inject constructor(
             _todayListeningTimeMs.value = repository.getListeningTimeSince(startOfToday())
             _songsToday.value = repository.getSongCountSince(startOfToday())
         }
-        viewModelScope.launch {
+        topArtistJob?.cancel()
+        topArtistJob = viewModelScope.launch {
             repository.getTopArtistsByDuration(startOfToday(), 1).collect { artists ->
                 _topArtistToday.value = artists.firstOrNull()?.artist
             }

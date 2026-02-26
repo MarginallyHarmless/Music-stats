@@ -24,7 +24,7 @@ object DatabaseModule {
             context,
             MusicStatsDatabase::class.java,
             "music_stats.db"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
     }
 
     @Provides

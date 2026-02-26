@@ -66,7 +66,7 @@ interface ListeningEventDao {
     @Query(
         """
         SELECT COALESCE(SUM(durationMs), 0) FROM listening_events
-        WHERE startedAt >= :since OR :since = 0
+        WHERE startedAt >= :since
         """
     )
     suspend fun getListeningTimeSince(since: Long): Long
@@ -80,7 +80,7 @@ interface ListeningEventDao {
                COUNT(le.id) AS playCount
         FROM listening_events le
         INNER JOIN songs s ON s.id = le.songId
-        WHERE le.startedAt >= :since OR :since = 0
+        WHERE le.startedAt >= :since
         GROUP BY le.songId
         ORDER BY totalDurationMs DESC
         LIMIT :limit
@@ -95,7 +95,7 @@ interface ListeningEventDao {
                COUNT(le.id) AS playCount
         FROM listening_events le
         INNER JOIN songs s ON s.id = le.songId
-        WHERE le.startedAt >= :since OR :since = 0
+        WHERE le.startedAt >= :since
         GROUP BY le.songId
         ORDER BY playCount DESC
         LIMIT :limit
@@ -112,7 +112,7 @@ interface ListeningEventDao {
                COUNT(le.id) AS playCount
         FROM listening_events le
         INNER JOIN songs s ON s.id = le.songId
-        WHERE le.startedAt >= :since OR :since = 0
+        WHERE le.startedAt >= :since
         GROUP BY s.artist
         ORDER BY totalDurationMs DESC
         LIMIT :limit
@@ -128,7 +128,7 @@ interface ListeningEventDao {
                COALESCE(SUM(durationMs), 0) AS totalDurationMs,
                COUNT(id) AS eventCount
         FROM listening_events
-        WHERE startedAt >= :since OR :since = 0
+        WHERE startedAt >= :since
         GROUP BY hour
         ORDER BY hour ASC
         """
@@ -141,7 +141,7 @@ interface ListeningEventDao {
                COALESCE(SUM(durationMs), 0) AS totalDurationMs,
                COUNT(id) AS eventCount
         FROM listening_events
-        WHERE startedAt >= :since OR :since = 0
+        WHERE startedAt >= :since
         GROUP BY day
         ORDER BY day ASC
         """
@@ -153,7 +153,7 @@ interface ListeningEventDao {
     @Query(
         """
         SELECT COUNT(DISTINCT songId) FROM listening_events
-        WHERE startedAt >= :since OR :since = 0
+        WHERE startedAt >= :since
         """
     )
     suspend fun getSongCountSince(since: Long): Int
@@ -179,7 +179,7 @@ interface ListeningEventDao {
     @Query(
         """
         SELECT COALESCE(AVG(durationMs), 0) FROM listening_events
-        WHERE startedAt >= :since OR :since = 0
+        WHERE startedAt >= :since
         """
     )
     suspend fun getAverageSessionDuration(since: Long = 0): Long
@@ -187,7 +187,7 @@ interface ListeningEventDao {
     @Query(
         """
         SELECT COALESCE(MAX(durationMs), 0) FROM listening_events
-        WHERE startedAt >= :since OR :since = 0
+        WHERE startedAt >= :since
         """
     )
     suspend fun getLongestSession(since: Long = 0): Long
@@ -252,9 +252,9 @@ interface ListeningEventDao {
         FROM listening_events le
         INNER JOIN songs s ON s.id = le.songId
         GROUP BY le.songId
-        HAVING playCount <= :threshold
+        HAVING playCount >= :threshold
         ORDER BY playCount ASC
         """
     )
-    fun getDeepCuts(threshold: Int = 2): Flow<List<SongPlayStats>>
+    fun getDeepCuts(threshold: Int = 50): Flow<List<SongPlayStats>>
 }

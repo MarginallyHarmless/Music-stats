@@ -100,7 +100,7 @@ fun DiscoveryStatsTab(viewModel: StatsViewModel) {
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "Songs you've only listened to a couple of times",
+            text = "Songs with 50+ plays — your most dedicated listens",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

@@ -83,4 +83,5 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.turbine)
+    testImplementation("io.mockk:mockk:1.13.13")
 }

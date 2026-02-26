@@ -21,13 +21,24 @@ class LibraryViewModel @Inject constructor(
     repository: MusicRepository
 ) : ViewModel() {
 
-    val searchQuery = MutableStateFlow("")
-    val sortMode = MutableStateFlow(SortMode.Alphabetical)
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery
+
+    private val _sortMode = MutableStateFlow(SortMode.Alphabetical)
+    val sortMode: StateFlow<SortMode> = _sortMode
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun setSortMode(mode: SortMode) {
+        _sortMode.value = mode
+    }
 
     val songs: StateFlow<List<SongWithStats>> = combine(
         repository.getAllSongsWithStats(),
-        searchQuery,
-        sortMode
+        _searchQuery,
+        _sortMode
     ) { allSongs, query, sort ->
         val filtered = if (query.isBlank()) {
             allSongs

@@ -106,7 +106,7 @@ class MusicRepository @Inject constructor(
 
     // --- Per-song stats ---
 
-    fun getDeepCuts(threshold: Int = 2): Flow<List<SongPlayStats>> =
+    fun getDeepCuts(threshold: Int = 50): Flow<List<SongPlayStats>> =
         eventDao.getDeepCuts(threshold)
 
     fun getEventsForSong(songId: Long): Flow<List<ListeningEvent>> =

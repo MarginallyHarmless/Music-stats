@@ -18,8 +18,9 @@ fun startOfToday(): Long {
 
 fun startOfWeek(): Long {
     val now = java.time.LocalDate.now()
-    val monday = now.with(java.time.DayOfWeek.MONDAY)
-    return monday.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+    val firstDayOfWeek = java.time.temporal.WeekFields.of(java.util.Locale.getDefault()).firstDayOfWeek
+    val weekStart = now.with(java.time.temporal.TemporalAdjusters.previousOrSame(firstDayOfWeek))
+    return weekStart.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
 }
 
 fun startOfMonth(): Long {

@@ -21,17 +21,19 @@ class MusicNotificationListener : NotificationListenerService() {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val activeCallbacks = mutableMapOf<MediaSession.Token, MediaController.Callback>()
+    private val activeControllers = mutableMapOf<MediaSession.Token, MediaController>()
+    private var sessionsChangedListener: MediaSessionManager.OnActiveSessionsChangedListener? = null
 
     override fun onListenerConnected() {
         super.onListenerConnected()
         val manager = getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
-        manager.addOnActiveSessionsChangedListener(
-            { controllers -> onSessionsChanged(controllers) },
-            ComponentName(this, MusicNotificationListener::class.java)
-        )
-        val controllers = manager.getActiveSessions(
-            ComponentName(this, MusicNotificationListener::class.java)
-        )
+        val componentName = ComponentName(this, MusicNotificationListener::class.java)
+        val listener = MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
+            onSessionsChanged(controllers)
+        }
+        sessionsChangedListener = listener
+        manager.addOnActiveSessionsChangedListener(listener, componentName)
+        val controllers = manager.getActiveSessions(componentName)
         onSessionsChanged(controllers)
     }
 
@@ -50,6 +52,7 @@ class MusicNotificationListener : NotificationListenerService() {
 
             controller.registerCallback(callback)
             activeCallbacks[controller.sessionToken] = callback
+            activeControllers[controller.sessionToken] = controller
 
             controller.metadata?.let { tracker.onMetadataChanged(it, controller.packageName, scope) }
             controller.playbackState?.let { tracker.onPlaybackStateChanged(it, controller.packageName, scope) }
@@ -58,7 +61,16 @@ class MusicNotificationListener : NotificationListenerService() {
 
     override fun onDestroy() {
         scope.cancel()
+        activeCallbacks.forEach { (token, callback) ->
+            activeControllers[token]?.unregisterCallback(callback)
+        }
         activeCallbacks.clear()
+        activeControllers.clear()
+        sessionsChangedListener?.let { listener ->
+            val manager = getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
+            manager.removeOnActiveSessionsChangedListener(listener)
+        }
+        sessionsChangedListener = null
         super.onDestroy()
     }
 

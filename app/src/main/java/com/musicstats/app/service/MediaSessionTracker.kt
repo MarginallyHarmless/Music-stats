@@ -17,6 +17,7 @@ class MediaSessionTracker @Inject constructor(
     private var playStartTime: Long? = null
     private var isPlaying: Boolean = false
 
+    @Synchronized
     fun onMetadataChanged(metadata: MediaMetadata?, sourceApp: String, scope: CoroutineScope) {
         val title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
         val artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST)
@@ -36,6 +37,7 @@ class MediaSessionTracker @Inject constructor(
         }
     }
 
+    @Synchronized
     fun onPlaybackStateChanged(state: PlaybackState?, sourceApp: String, scope: CoroutineScope) {
         val wasPlaying = isPlaying
         isPlaying = state?.state == PlaybackState.STATE_PLAYING
@@ -48,6 +50,7 @@ class MediaSessionTracker @Inject constructor(
         }
     }
 
+    @Synchronized
     private fun saveCurrentIfPlaying(scope: CoroutineScope) {
         val title = currentTitle ?: return
         val artist = currentArtist ?: return

@@ -53,7 +53,7 @@ fun LibraryScreen(
 
         OutlinedTextField(
             value = searchQuery,
-            onValueChange = { viewModel.searchQuery.value = it },
+            onValueChange = { viewModel.setSearchQuery(it) },
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Search songs or artists") },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
@@ -68,7 +68,7 @@ fun LibraryScreen(
             SortMode.entries.forEach { mode ->
                 FilterChip(
                     selected = sortMode == mode,
-                    onClick = { viewModel.sortMode.value = mode },
+                    onClick = { viewModel.setSortMode(mode) },
                     label = {
                         Text(
                             when (mode) {
