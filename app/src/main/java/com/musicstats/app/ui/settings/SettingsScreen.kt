@@ -49,6 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.musicstats.app.BuildConfig
+import com.musicstats.app.ui.components.SectionHeader
 import kotlinx.coroutines.launch
 
 private val lenientJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
@@ -165,11 +166,14 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 text = "Settings",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(24.dp)
             )
 
             // Data section
-            SectionHeader("Data")
+            SectionHeader(
+                text = "Data",
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+            )
 
             SettingsRow(
                 icon = Icons.Default.FileUpload,
@@ -192,10 +196,13 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 }
             )
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
 
             // Permissions section
-            SectionHeader("Permissions")
+            SectionHeader(
+                text = "Permissions",
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+            )
 
             val listenerEnabled = viewModel.isNotificationListenerEnabled()
             SettingsRow(
@@ -215,10 +222,13 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 }
             )
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
 
             // About section
-            SectionHeader("About")
+            SectionHeader(
+                text = "About",
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+            )
 
             SettingsRow(
                 icon = Icons.Default.Info,
@@ -240,20 +250,9 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(16.dp)
+                .padding(24.dp)
         )
     }
-}
-
-@Composable
-private fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-    )
 }
 
 @Composable
@@ -268,7 +267,7 @@ private fun SettingsRow(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 24.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (icon != null) {
