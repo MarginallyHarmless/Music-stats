@@ -96,6 +96,12 @@ class MusicRepository @Inject constructor(
     fun getNewArtistsDiscoveredSince(since: Long): Flow<Int> =
         eventDao.getNewArtistsDiscoveredSince(since)
 
+    // --- Skip counts ---
+
+    fun getSkipCountSince(since: Long): Flow<Int> = eventDao.getSkipCountSince(since)
+
+    fun getSkipCountForSong(songId: Long): Flow<Int> = eventDao.getSkipCountForSong(songId)
+
     // --- Session stats ---
 
     fun getAverageSessionDuration(since: Long = 0): Flow<Long> =

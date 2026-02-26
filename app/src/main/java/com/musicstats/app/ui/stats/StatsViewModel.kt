@@ -68,6 +68,11 @@ class StatsViewModel @Inject constructor(
             repository.getLongestSession(range.toEpochMillis())
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
+    val totalSkips: StateFlow<Int> =
+        _selectedTimeRange.flatMapLatest { range ->
+            repository.getSkipCountSince(range.toEpochMillis())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     val hourlyListening: StateFlow<List<HourlyListening>> =
         _selectedTimeRange.flatMapLatest { range ->
             repository.getHourlyListening(range.toEpochMillis())

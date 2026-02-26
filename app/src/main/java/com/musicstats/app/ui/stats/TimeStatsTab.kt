@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
@@ -31,6 +32,7 @@ import com.musicstats.app.util.formatDuration
 @Composable
 fun TimeStatsTab(viewModel: StatsViewModel) {
     val totalTime by viewModel.totalListeningTime.collectAsState()
+    val totalSkips by viewModel.totalSkips.collectAsState()
     val avgSession by viewModel.avgSessionDuration.collectAsState()
     val longest by viewModel.longestSession.collectAsState()
     val hourlyData by viewModel.hourlyListening.collectAsState()
@@ -85,6 +87,12 @@ fun TimeStatsTab(viewModel: StatsViewModel) {
                 label = "Longest Session",
                 value = formatDuration(longest),
                 icon = Icons.Default.Timer,
+                modifier = Modifier.weight(1f)
+            )
+            StatCard(
+                label = "Skips",
+                value = "$totalSkips",
+                icon = Icons.Default.SkipNext,
                 modifier = Modifier.weight(1f)
             )
         }

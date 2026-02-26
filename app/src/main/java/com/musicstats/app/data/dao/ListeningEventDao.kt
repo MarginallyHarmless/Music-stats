@@ -174,6 +174,24 @@ interface ListeningEventDao {
     )
     fun getNewArtistsDiscoveredSince(since: Long): Flow<Int>
 
+    // --- Skip counts ---
+
+    @Query(
+        """
+        SELECT COUNT(*) FROM listening_events
+        WHERE completed = 0 AND startedAt >= :since
+        """
+    )
+    fun getSkipCountSince(since: Long): Flow<Int>
+
+    @Query(
+        """
+        SELECT COUNT(*) FROM listening_events
+        WHERE completed = 0 AND songId = :songId
+        """
+    )
+    fun getSkipCountForSong(songId: Long): Flow<Int>
+
     // --- Session stats ---
 
     @Query(

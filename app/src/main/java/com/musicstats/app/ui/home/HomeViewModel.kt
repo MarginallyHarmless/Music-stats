@@ -28,6 +28,10 @@ class HomeViewModel @Inject constructor(
         repository.getSongCountSince(startOfToday())
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    val skipsToday: StateFlow<Int> =
+        repository.getSkipCountSince(startOfToday())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     val topArtistToday: StateFlow<String?> =
         repository.getTopArtistsByDuration(startOfToday(), 1)
             .map { artists -> artists.firstOrNull()?.artist }

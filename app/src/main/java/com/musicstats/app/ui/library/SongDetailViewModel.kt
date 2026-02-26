@@ -37,6 +37,9 @@ class SongDetailViewModel @Inject constructor(
     private val _skipRate = MutableStateFlow(0f)
     val skipRate: StateFlow<Float> = _skipRate
 
+    val skipCount: StateFlow<Int> = repository.getSkipCountForSong(songId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     init {
         viewModelScope.launch {
             val stats = repository.getSongStats(songId)

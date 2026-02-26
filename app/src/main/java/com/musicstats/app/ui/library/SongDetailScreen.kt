@@ -36,6 +36,7 @@ fun SongDetailScreen(
     val totalPlayCount by viewModel.totalPlayCount.collectAsState()
     val totalListeningTime by viewModel.totalListeningTime.collectAsState()
     val skipRate by viewModel.skipRate.collectAsState()
+    val skipCount by viewModel.skipCount.collectAsState()
     val history by viewModel.listeningHistory.collectAsState()
 
     if (song == null) {
@@ -92,6 +93,11 @@ fun SongDetailScreen(
                 StatBox(
                     label = "Total Time",
                     value = formatDuration(totalListeningTime),
+                    modifier = Modifier.weight(1f)
+                )
+                StatBox(
+                    label = "Skips",
+                    value = "$skipCount",
                     modifier = Modifier.weight(1f)
                 )
                 StatBox(

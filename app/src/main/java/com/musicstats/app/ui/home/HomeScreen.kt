@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
@@ -36,6 +37,7 @@ import com.musicstats.app.util.formatDuration
 fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
     val todayMs by viewModel.todayListeningTimeMs.collectAsState()
     val songsToday by viewModel.songsToday.collectAsState()
+    val skipsToday by viewModel.skipsToday.collectAsState()
     val topArtist by viewModel.topArtistToday.collectAsState()
     val weeklyData by viewModel.weeklyDailyListening.collectAsState()
     val topSongs by viewModel.topSongsThisWeek.collectAsState()
@@ -93,6 +95,12 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
                 label = "Top Artist",
                 value = topArtist ?: "\u2014",
                 icon = Icons.Default.Person,
+                modifier = Modifier.weight(1f)
+            )
+            StatCard(
+                label = "Skips Today",
+                value = skipsToday.toString(),
+                icon = Icons.Default.SkipNext,
                 modifier = Modifier.weight(1f)
             )
             StatCard(
