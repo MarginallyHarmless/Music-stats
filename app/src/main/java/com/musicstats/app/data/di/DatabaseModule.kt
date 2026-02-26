@@ -26,7 +26,6 @@ object DatabaseModule {
             "music_stats.db"
         )
             .addMigrations(MusicStatsDatabase.MIGRATION_1_2, MusicStatsDatabase.MIGRATION_2_3)
-            .fallbackToDestructiveMigration()
             .build()
     }
 

@@ -1,7 +1,9 @@
 package com.musicstats.app.ui
 
+import android.content.ComponentName
 import android.content.Intent
 import android.os.Bundle
+import android.service.notification.NotificationListenerService
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -27,6 +29,10 @@ class MainActivity : ComponentActivity() {
         val onboardingComplete = OnboardingViewModel.isOnboardingComplete(this)
         if (onboardingComplete) {
             startService(Intent(this, TrackingService::class.java))
+            // Request rebind of notification listener in case Android disconnected it
+            NotificationListenerService.requestRebind(
+                ComponentName(this, com.musicstats.app.service.MusicNotificationListener::class.java)
+            )
         }
 
         setContent {
