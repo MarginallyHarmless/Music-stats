@@ -63,9 +63,9 @@ class MusicRepository @Inject constructor(
 
     fun getTotalListeningTime(): Flow<Long> = eventDao.getTotalListeningTimeMs()
 
-    suspend fun getListeningTimeSince(since: Long): Long = eventDao.getListeningTimeSince(since)
+    fun getListeningTimeSince(since: Long): Flow<Long> = eventDao.getListeningTimeSince(since)
 
-    suspend fun getSongCountSince(since: Long): Int = eventDao.getSongCountSince(since)
+    fun getSongCountSince(since: Long): Flow<Int> = eventDao.getSongCountSince(since)
 
     // --- Top songs ---
 
@@ -90,18 +90,18 @@ class MusicRepository @Inject constructor(
 
     // --- Counts & discovery ---
 
-    suspend fun getNewSongsDiscoveredSince(since: Long): Int =
+    fun getNewSongsDiscoveredSince(since: Long): Flow<Int> =
         eventDao.getNewSongsDiscoveredSince(since)
 
-    suspend fun getNewArtistsDiscoveredSince(since: Long): Int =
+    fun getNewArtistsDiscoveredSince(since: Long): Flow<Int> =
         eventDao.getNewArtistsDiscoveredSince(since)
 
     // --- Session stats ---
 
-    suspend fun getAverageSessionDuration(since: Long = 0): Long =
+    fun getAverageSessionDuration(since: Long = 0): Flow<Long> =
         eventDao.getAverageSessionDuration(since)
 
-    suspend fun getLongestSession(since: Long = 0): Long =
+    fun getLongestSession(since: Long = 0): Flow<Long> =
         eventDao.getLongestSession(since)
 
     // --- Per-song stats ---

@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 enum class TimeRange(val label: String) {
@@ -52,18 +51,23 @@ class StatsViewModel @Inject constructor(
     private val _selectedMetric = MutableStateFlow(TopListMetric.Duration)
     val selectedMetric: StateFlow<TopListMetric> = _selectedMetric.asStateFlow()
 
-    // --- Time tab (suspend-based data, reloaded on time range change) ---
+    // --- Time tab (reactive, flatMapLatest on time range) ---
 
-    private val _totalListeningTime = MutableStateFlow(0L)
-    val totalListeningTime: StateFlow<Long> = _totalListeningTime.asStateFlow()
+    val totalListeningTime: StateFlow<Long> =
+        _selectedTimeRange.flatMapLatest { range ->
+            repository.getListeningTimeSince(range.toEpochMillis())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
-    private val _avgSessionDuration = MutableStateFlow(0L)
-    val avgSessionDuration: StateFlow<Long> = _avgSessionDuration.asStateFlow()
+    val avgSessionDuration: StateFlow<Long> =
+        _selectedTimeRange.flatMapLatest { range ->
+            repository.getAverageSessionDuration(range.toEpochMillis())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
-    private val _longestSession = MutableStateFlow(0L)
-    val longestSession: StateFlow<Long> = _longestSession.asStateFlow()
+    val longestSession: StateFlow<Long> =
+        _selectedTimeRange.flatMapLatest { range ->
+            repository.getLongestSession(range.toEpochMillis())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
-    // Flow-based data — flatMapLatest when time range changes
     val hourlyListening: StateFlow<List<HourlyListening>> =
         _selectedTimeRange.flatMapLatest { range ->
             repository.getHourlyListening(range.toEpochMillis())
@@ -74,13 +78,17 @@ class StatsViewModel @Inject constructor(
             repository.getDailyListening(range.toEpochMillis())
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // --- Discovery tab (suspend-based data) ---
+    // --- Discovery tab (reactive, flatMapLatest on time range) ---
 
-    private val _newSongsDiscovered = MutableStateFlow(0)
-    val newSongsDiscovered: StateFlow<Int> = _newSongsDiscovered.asStateFlow()
+    val newSongsDiscovered: StateFlow<Int> =
+        _selectedTimeRange.flatMapLatest { range ->
+            repository.getNewSongsDiscoveredSince(range.toEpochMillis())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    private val _newArtistsDiscovered = MutableStateFlow(0)
-    val newArtistsDiscovered: StateFlow<Int> = _newArtistsDiscovered.asStateFlow()
+    val newArtistsDiscovered: StateFlow<Int> =
+        _selectedTimeRange.flatMapLatest { range ->
+            repository.getNewArtistsDiscoveredSince(range.toEpochMillis())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val totalUniqueSongs: StateFlow<Int> =
         repository.getTotalSongCount()
@@ -94,7 +102,7 @@ class StatsViewModel @Inject constructor(
         repository.getDeepCuts()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // --- Top Lists tab (Flow-based, flatMapLatest) ---
+    // --- Top Lists tab (reactive, flatMapLatest on time range) ---
 
     val topSongsByDuration: StateFlow<List<SongPlayStats>> =
         _selectedTimeRange.flatMapLatest { range ->
@@ -111,27 +119,11 @@ class StatsViewModel @Inject constructor(
             repository.getTopArtistsByDuration(range.toEpochMillis(), 10)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    init {
-        loadSuspendData()
-    }
-
     fun selectTimeRange(range: TimeRange) {
         _selectedTimeRange.value = range
-        loadSuspendData()
     }
 
     fun selectMetric(metric: TopListMetric) {
         _selectedMetric.value = metric
-    }
-
-    private fun loadSuspendData() {
-        val since = _selectedTimeRange.value.toEpochMillis()
-        viewModelScope.launch {
-            _totalListeningTime.value = repository.getListeningTimeSince(since)
-            _avgSessionDuration.value = repository.getAverageSessionDuration(since)
-            _longestSession.value = repository.getLongestSession(since)
-            _newSongsDiscovered.value = repository.getNewSongsDiscoveredSince(since)
-            _newArtistsDiscovered.value = repository.getNewArtistsDiscoveredSince(since)
-        }
     }
 }

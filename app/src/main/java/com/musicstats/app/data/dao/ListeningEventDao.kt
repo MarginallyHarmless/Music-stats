@@ -69,7 +69,7 @@ interface ListeningEventDao {
         WHERE startedAt >= :since
         """
     )
-    suspend fun getListeningTimeSince(since: Long): Long
+    fun getListeningTimeSince(since: Long): Flow<Long>
 
     // --- Top songs ---
 
@@ -156,7 +156,7 @@ interface ListeningEventDao {
         WHERE startedAt >= :since
         """
     )
-    suspend fun getSongCountSince(since: Long): Int
+    fun getSongCountSince(since: Long): Flow<Int>
 
     @Query(
         """
@@ -164,7 +164,7 @@ interface ListeningEventDao {
         WHERE firstHeardAt >= :since
         """
     )
-    suspend fun getNewSongsDiscoveredSince(since: Long): Int
+    fun getNewSongsDiscoveredSince(since: Long): Flow<Int>
 
     @Query(
         """
@@ -172,7 +172,7 @@ interface ListeningEventDao {
         WHERE firstHeardAt >= :since
         """
     )
-    suspend fun getNewArtistsDiscoveredSince(since: Long): Int
+    fun getNewArtistsDiscoveredSince(since: Long): Flow<Int>
 
     // --- Session stats ---
 
@@ -182,7 +182,7 @@ interface ListeningEventDao {
         WHERE startedAt >= :since
         """
     )
-    suspend fun getAverageSessionDuration(since: Long = 0): Long
+    fun getAverageSessionDuration(since: Long = 0): Flow<Long>
 
     @Query(
         """
@@ -190,7 +190,7 @@ interface ListeningEventDao {
         WHERE startedAt >= :since
         """
     )
-    suspend fun getLongestSession(since: Long = 0): Long
+    fun getLongestSession(since: Long = 0): Flow<Long>
 
     // --- Per-song stats ---
 
