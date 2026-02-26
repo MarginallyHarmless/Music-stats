@@ -7,6 +7,16 @@ import androidx.room.Query
 import com.musicstats.app.data.model.ListeningEvent
 import kotlinx.coroutines.flow.Flow
 
+data class SongWithStats(
+    val songId: Long,
+    val title: String,
+    val artist: String,
+    val album: String?,
+    val totalDurationMs: Long,
+    val playCount: Int,
+    val firstHeardAt: Long
+)
+
 data class SongPlayStats(
     val songId: Long,
     val title: String,
@@ -211,6 +221,20 @@ interface ListeningEventDao {
 
     @Query("SELECT * FROM listening_events WHERE songId = :songId ORDER BY startedAt DESC")
     fun getEventsForSong(songId: Long): Flow<List<ListeningEvent>>
+
+    @Query(
+        """
+        SELECT s.id AS songId, s.title, s.artist, s.album,
+               COALESCE(SUM(le.durationMs), 0) AS totalDurationMs,
+               COUNT(le.id) AS playCount,
+               s.firstHeardAt
+        FROM songs s
+        LEFT JOIN listening_events le ON le.songId = s.id
+        GROUP BY s.id
+        ORDER BY s.title ASC
+        """
+    )
+    fun getAllSongsWithStats(): Flow<List<SongWithStats>>
 
     @Query("SELECT * FROM listening_events ORDER BY startedAt DESC")
     suspend fun getAllEventsSnapshot(): List<ListeningEvent>

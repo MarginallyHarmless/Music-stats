@@ -4,6 +4,7 @@ import com.musicstats.app.data.dao.ArtistPlayStats
 import com.musicstats.app.data.dao.DailyListening
 import com.musicstats.app.data.dao.HourlyListening
 import com.musicstats.app.data.dao.SongPlayStats
+import com.musicstats.app.data.dao.SongWithStats
 import com.musicstats.app.data.dao.ArtistDao
 import com.musicstats.app.data.dao.ListeningEventDao
 import com.musicstats.app.data.dao.SongDao
@@ -118,6 +119,10 @@ class MusicRepository @Inject constructor(
     // --- Song & artist queries ---
 
     fun getAllSongs(): Flow<List<Song>> = songDao.getAllSongs()
+
+    fun getAllSongsWithStats(): Flow<List<SongWithStats>> = eventDao.getAllSongsWithStats()
+
+    fun getSongByIdFlow(id: Long): Flow<Song?> = songDao.getSongByIdFlow(id)
 
     fun getTotalSongCount(): Flow<Int> = songDao.getTotalSongCount()
 

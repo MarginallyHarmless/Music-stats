@@ -8,6 +8,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.musicstats.app.ui.home.HomeScreen
+import com.musicstats.app.ui.library.LibraryScreen
+import com.musicstats.app.ui.library.SongDetailScreen
 import com.musicstats.app.ui.onboarding.OnboardingScreen
 import com.musicstats.app.ui.stats.StatsScreen
 
@@ -28,8 +30,9 @@ fun NavGraph(navController: NavHostController, startDestination: String, modifie
             StatsScreen()
         }
         composable("library") {
-            // Placeholder — Task 11
-            androidx.compose.material3.Text("Library")
+            LibraryScreen(onSongClick = { songId ->
+                navController.navigate("song/$songId")
+            })
         }
         composable("settings") {
             // Placeholder — Task 12
@@ -38,10 +41,8 @@ fun NavGraph(navController: NavHostController, startDestination: String, modifie
         composable(
             "song/{songId}",
             arguments = listOf(navArgument("songId") { type = NavType.LongType })
-        ) { backStackEntry ->
-            val songId = backStackEntry.arguments?.getLong("songId") ?: return@composable
-            // Placeholder — Task 11
-            androidx.compose.material3.Text("Song Detail: $songId")
+        ) {
+            SongDetailScreen()
         }
     }
 }

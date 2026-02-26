@@ -29,6 +29,9 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE id = :id")
     suspend fun getById(id: Long): Song?
 
+    @Query("SELECT * FROM songs WHERE id = :id")
+    fun getSongByIdFlow(id: Long): Flow<Song?>
+
     @Query("SELECT COUNT(*) FROM songs")
     fun getTotalSongCount(): Flow<Int>
 
