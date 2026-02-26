@@ -47,7 +47,21 @@ class MediaSessionTracker @Inject constructor(
             playStartTime = System.currentTimeMillis()
         } else if (!isPlaying && wasPlaying) {
             saveCurrentIfPlaying(scope)
+        } else if (isPlaying && wasPlaying && playStartTime != null) {
+            // Detect rewind/restart: position jumped back to near start while still playing
+            val positionMs = state?.position ?: return
+            if (positionMs < REWIND_POSITION_THRESHOLD_MS) {
+                val elapsed = System.currentTimeMillis() - playStartTime!!
+                if (elapsed >= 5_000) {
+                    saveCurrentIfPlaying(scope)
+                    playStartTime = System.currentTimeMillis()
+                }
+            }
         }
+    }
+
+    companion object {
+        private const val REWIND_POSITION_THRESHOLD_MS = 3_000L
     }
 
     @Synchronized
