@@ -44,11 +44,11 @@ class HomeViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val topArtistToday: StateFlow<TopArtistInfo?> =
         repository.getTopArtistsByDuration(startOfToday(), 1)
-            .map { artists -> artists.firstOrNull()?.artist }
-            .flatMapLatest { name ->
-                if (name == null) flowOf(null)
-                else repository.getArtistImageUrl(name).map { imageUrl ->
-                    TopArtistInfo(name, imageUrl)
+            .map { artists -> artists.firstOrNull() }
+            .flatMapLatest { stats ->
+                if (stats == null) flowOf(null)
+                else repository.getArtistImageUrl(stats.artist).map { imageUrl ->
+                    TopArtistInfo(stats.artist, imageUrl, stats.playCount, stats.totalDurationMs)
                 }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
@@ -98,5 +98,7 @@ class HomeViewModel @Inject constructor(
 
 data class TopArtistInfo(
     val name: String,
-    val imageUrl: String?
+    val imageUrl: String?,
+    val playCount: Int = 0,
+    val totalDurationMs: Long = 0L
 )

@@ -125,6 +125,20 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                if (topArtistInfo != null) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "${topArtistInfo?.playCount} plays",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = formatDuration(topArtistInfo?.totalDurationMs ?: 0L),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
 
