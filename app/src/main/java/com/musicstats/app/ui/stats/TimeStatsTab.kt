@@ -6,16 +6,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,8 +17,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.musicstats.app.ui.components.GradientCard
 import com.musicstats.app.ui.components.HourlyHeatmap
 import com.musicstats.app.ui.components.ListeningTimeChart
+import com.musicstats.app.ui.components.SectionHeader
 import com.musicstats.app.ui.components.StatCard
 import com.musicstats.app.util.formatDuration
 
@@ -43,62 +37,49 @@ fun TimeStatsTab(viewModel: StatsViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // Hero: total listening time + total plays
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            ElevatedCard(modifier = Modifier.weight(1f)) {
+            GradientCard(modifier = Modifier.weight(1f)) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Schedule,
-                        contentDescription = "Total listening time",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
                     Text(
                         text = formatDuration(totalTime),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Text(
                         text = "listening time",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     )
                 }
             }
-            ElevatedCard(modifier = Modifier.weight(1f)) {
+            GradientCard(modifier = Modifier.weight(1f)) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Total plays",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
                     Text(
                         text = "$totalPlays",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Text(
                         text = "total plays",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     )
                 }
             }
@@ -112,37 +93,26 @@ fun TimeStatsTab(viewModel: StatsViewModel) {
             StatCard(
                 label = "Avg Session",
                 value = formatDuration(avgSession),
-                icon = Icons.Default.Timer,
                 modifier = Modifier.weight(1f)
             )
             StatCard(
-                label = "Longest Session",
+                label = "Longest",
                 value = formatDuration(longest),
-                icon = Icons.Default.Timer,
                 modifier = Modifier.weight(1f)
             )
             StatCard(
                 label = "Skips",
                 value = "$totalSkips",
-                icon = Icons.Default.SkipNext,
                 modifier = Modifier.weight(1f)
             )
         }
 
         // Hourly heatmap
-        Text(
-            text = "Listening by Hour",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
+        SectionHeader("Listening by Hour")
         HourlyHeatmap(hourlyData = hourlyData)
 
         // Daily chart
-        Text(
-            text = "Daily Listening",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
+        SectionHeader("Daily Listening")
         ListeningTimeChart(
             dailyData = dailyData,
             modifier = Modifier
