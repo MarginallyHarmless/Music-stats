@@ -1,5 +1,8 @@
 package com.musicstats.app.ui.home
 
+import android.content.ComponentName
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,22 +20,34 @@ import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import coil3.compose.AsyncImage
+import com.musicstats.app.service.MusicNotificationListener
 import com.musicstats.app.ui.components.ListeningTimeChart
 import com.musicstats.app.ui.components.StatCard
 import com.musicstats.app.util.formatDuration
@@ -47,6 +62,16 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
     val topSongs by viewModel.topSongsThisWeek.collectAsState()
     val streak by viewModel.currentStreak.collectAsState()
 
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var listenerEnabled by remember { mutableStateOf(isNotificationListenerEnabled(context)) }
+
+    androidx.compose.runtime.LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            listenerEnabled = isNotificationListenerEnabled(context)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -54,6 +79,47 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Warning banner when notification listener is disabled
+        if (!listenerEnabled) {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = "Warning",
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Tracking paused",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Text(
+                            text = "Notification access is disabled. Tap to re-enable.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                    FilledTonalButton(onClick = {
+                        context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                    }) {
+                        Text("Fix")
+                    }
+                }
+            }
+        }
+
         // Hero card — today's listening time
         ElevatedCard(
             modifier = Modifier.fillMaxWidth()
@@ -250,4 +316,13 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(8.dp))
     }
+}
+
+private fun isNotificationListenerEnabled(context: android.content.Context): Boolean {
+    val flat = Settings.Secure.getString(
+        context.contentResolver,
+        "enabled_notification_listeners"
+    ) ?: return false
+    val componentName = ComponentName(context, MusicNotificationListener::class.java).flattenToString()
+    return flat.split(":").any { it == componentName }
 }

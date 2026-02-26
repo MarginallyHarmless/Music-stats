@@ -2,6 +2,7 @@ package com.musicstats.app.ui.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.musicstats.app.data.dao.ArtistWithStats
 import com.musicstats.app.data.dao.SongWithStats
 import com.musicstats.app.data.repository.MusicRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,6 +35,29 @@ class LibraryViewModel @Inject constructor(
     fun setSortMode(mode: SortMode) {
         _sortMode.value = mode
     }
+
+    private val _artistSearchQuery = MutableStateFlow("")
+    val artistSearchQuery: StateFlow<String> = _artistSearchQuery
+
+    private val _artistSortMode = MutableStateFlow(SortMode.Alphabetical)
+    val artistSortMode: StateFlow<SortMode> = _artistSortMode
+
+    fun setArtistSearchQuery(query: String) { _artistSearchQuery.value = query }
+    fun setArtistSortMode(mode: SortMode) { _artistSortMode.value = mode }
+
+    val artists: StateFlow<List<ArtistWithStats>> = combine(
+        repository.getAllArtistsWithStats(),
+        _artistSearchQuery,
+        _artistSortMode
+    ) { allArtists, query, sort ->
+        val filtered = if (query.isBlank()) allArtists
+        else { val lower = query.lowercase(); allArtists.filter { it.name.lowercase().contains(lower) } }
+        when (sort) {
+            SortMode.MostPlayed -> filtered.sortedByDescending { it.playCount }
+            SortMode.MostRecent -> filtered.sortedByDescending { it.firstHeardAt }
+            SortMode.Alphabetical -> filtered.sortedBy { it.name.lowercase() }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val songs: StateFlow<List<SongWithStats>> = combine(
         repository.getAllSongsWithStats(),

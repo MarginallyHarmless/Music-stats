@@ -1,6 +1,9 @@
 package com.musicstats.app.data.repository
 
+import com.musicstats.app.data.dao.ArtistListeningEvent
 import com.musicstats.app.data.dao.ArtistPlayStats
+import com.musicstats.app.data.dao.ArtistStats
+import com.musicstats.app.data.dao.ArtistWithStats
 import com.musicstats.app.data.dao.DailyListening
 import com.musicstats.app.data.dao.HourlyListening
 import com.musicstats.app.data.dao.SongPlayStats
@@ -90,6 +93,8 @@ class MusicRepository @Inject constructor(
 
     fun getListeningTimeSince(since: Long): Flow<Long> = eventDao.getListeningTimeSince(since)
 
+    fun getTotalPlayCount(since: Long): Flow<Int> = eventDao.getTotalPlayCount(since)
+
     fun getSongCountSince(since: Long): Flow<Int> = eventDao.getSongCountSince(since)
 
     // --- Top songs ---
@@ -164,6 +169,12 @@ class MusicRepository @Inject constructor(
     fun getTotalArtistCount(): Flow<Int> = artistDao.getTotalArtistCount()
 
     fun getArtistImageUrl(name: String): Flow<String?> = artistDao.getArtistImageUrl(name)
+
+    fun getAllArtistsWithStats(): Flow<List<ArtistWithStats>> = eventDao.getAllArtistsWithStats()
+
+    suspend fun getArtistStats(artistName: String): ArtistStats? = eventDao.getArtistStats(artistName)
+
+    fun getEventsForArtist(artistName: String): Flow<List<ArtistListeningEvent>> = eventDao.getEventsForArtist(artistName)
 
     private fun fetchAlbumArt(songId: Long, title: String, artist: String) {
         scope.launch {

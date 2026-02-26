@@ -65,6 +65,26 @@ class MusicNotificationListener : NotificationListenerService() {
         }
     }
 
+    override fun onListenerDisconnected() {
+        Log.w("MusicNotifListener", "Notification listener DISCONNECTED — tracking stopped")
+        // Clean up existing sessions since we can't receive updates anymore
+        activeCallbacks.forEach { (token, callback) ->
+            activeControllers[token]?.unregisterCallback(callback)
+        }
+        activeCallbacks.clear()
+        activeControllers.clear()
+        sessionsChangedListener?.let { listener ->
+            try {
+                val manager = getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
+                manager.removeOnActiveSessionsChangedListener(listener)
+            } catch (_: Exception) {}
+        }
+        sessionsChangedListener = null
+        // Ask the system to rebind us
+        requestRebind(ComponentName(this, MusicNotificationListener::class.java))
+        super.onListenerDisconnected()
+    }
+
     override fun onDestroy() {
         scope.cancel()
         activeCallbacks.forEach { (token, callback) ->

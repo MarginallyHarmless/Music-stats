@@ -58,6 +58,11 @@ class StatsViewModel @Inject constructor(
             repository.getListeningTimeSince(range.toEpochMillis())
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
+    val totalPlayCount: StateFlow<Int> =
+        _selectedTimeRange.flatMapLatest { range ->
+            repository.getTotalPlayCount(range.toEpochMillis())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     val avgSessionDuration: StateFlow<Long> =
         _selectedTimeRange.flatMapLatest { range ->
             repository.getAverageSessionDuration(range.toEpochMillis())

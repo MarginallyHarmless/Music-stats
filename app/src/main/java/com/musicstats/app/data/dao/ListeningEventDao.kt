@@ -45,6 +45,30 @@ data class DailyListening(
     val eventCount: Int
 )
 
+data class ArtistWithStats(
+    val name: String,
+    val imageUrl: String?,
+    val firstHeardAt: Long,
+    val totalDurationMs: Long,
+    val playCount: Int
+)
+
+data class ArtistStats(
+    val totalDurationMs: Long,
+    val totalEvents: Int,
+    val playCount: Int,
+    val skipCount: Int
+)
+
+data class ArtistListeningEvent(
+    val id: Long,
+    val songTitle: String,
+    val startedAt: Long,
+    val durationMs: Long,
+    val sourceApp: String,
+    val completed: Boolean
+)
+
 @Dao
 interface ListeningEventDao {
 
@@ -149,6 +173,11 @@ interface ListeningEventDao {
         """
     )
     fun getDailyListening(since: Long = 0): Flow<List<DailyListening>>
+
+    // --- Total play count ---
+
+    @Query("SELECT COUNT(*) FROM listening_events WHERE startedAt >= :since AND completed = 1")
+    fun getTotalPlayCount(since: Long): Flow<Int>
 
     // --- Counts & discovery ---
 
@@ -258,6 +287,40 @@ interface ListeningEventDao {
 
     @Query("SELECT * FROM listening_events ORDER BY startedAt DESC")
     suspend fun getAllEventsSnapshot(): List<ListeningEvent>
+
+    // --- Artist list & detail ---
+
+    @Query("""
+        SELECT a.name, a.imageUrl, a.firstHeardAt,
+               COALESCE(SUM(le.durationMs), 0) AS totalDurationMs,
+               COUNT(le.id) AS playCount
+        FROM artists a
+        LEFT JOIN songs s ON s.artist = a.name
+        LEFT JOIN listening_events le ON le.songId = s.id
+        GROUP BY a.name
+        ORDER BY a.name ASC
+    """)
+    fun getAllArtistsWithStats(): Flow<List<ArtistWithStats>>
+
+    @Query("""
+        SELECT COALESCE(SUM(le.durationMs), 0) AS totalDurationMs,
+               COUNT(le.id) AS totalEvents,
+               COUNT(CASE WHEN le.completed = 1 THEN 1 END) AS playCount,
+               COUNT(CASE WHEN le.completed = 0 THEN 1 END) AS skipCount
+        FROM listening_events le
+        INNER JOIN songs s ON s.id = le.songId
+        WHERE s.artist = :artistName
+    """)
+    suspend fun getArtistStats(artistName: String): ArtistStats?
+
+    @Query("""
+        SELECT le.id, s.title AS songTitle, le.startedAt, le.durationMs, le.sourceApp, le.completed
+        FROM listening_events le
+        INNER JOIN songs s ON s.id = le.songId
+        WHERE s.artist = :artistName
+        ORDER BY le.startedAt DESC
+    """)
+    fun getEventsForArtist(artistName: String): Flow<List<ArtistListeningEvent>>
 
     // --- Misc ---
 

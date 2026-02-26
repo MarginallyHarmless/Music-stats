@@ -1,6 +1,7 @@
 package com.musicstats.app.ui.navigation
 
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -11,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.musicstats.app.service.TrackingService
 import com.musicstats.app.ui.home.HomeScreen
+import com.musicstats.app.ui.library.ArtistDetailScreen
 import com.musicstats.app.ui.library.LibraryScreen
 import com.musicstats.app.ui.library.SongDetailScreen
 import com.musicstats.app.ui.onboarding.OnboardingScreen
@@ -36,9 +38,10 @@ fun NavGraph(navController: NavHostController, startDestination: String, modifie
             StatsScreen()
         }
         composable("library") {
-            LibraryScreen(onSongClick = { songId ->
-                navController.navigate("song/$songId")
-            })
+            LibraryScreen(
+                onSongClick = { songId -> navController.navigate("song/$songId") },
+                onArtistClick = { artistName -> navController.navigate("artist/${Uri.encode(artistName)}") }
+            )
         }
         composable("settings") {
             SettingsScreen()
@@ -48,6 +51,12 @@ fun NavGraph(navController: NavHostController, startDestination: String, modifie
             arguments = listOf(navArgument("songId") { type = NavType.LongType })
         ) {
             SongDetailScreen()
+        }
+        composable(
+            "artist/{artistName}",
+            arguments = listOf(navArgument("artistName") { type = NavType.StringType })
+        ) {
+            ArtistDetailScreen()
         }
     }
 }

@@ -21,7 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 
-private val tabs = listOf("Time", "Discovery", "Top Lists")
+private val tabs = listOf("Listening", "Discovery", "Top Lists")
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
