@@ -11,7 +11,12 @@ import com.musicstats.app.data.dao.SongDao
 import com.musicstats.app.data.model.Artist
 import com.musicstats.app.data.model.ListeningEvent
 import com.musicstats.app.data.model.Song
+import com.musicstats.app.data.remote.ArtistImageFetcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,8 +24,10 @@ import javax.inject.Singleton
 class MusicRepository @Inject constructor(
     private val songDao: SongDao,
     private val artistDao: ArtistDao,
-    private val eventDao: ListeningEventDao
+    private val eventDao: ListeningEventDao,
+    private val artistImageFetcher: ArtistImageFetcher
 ) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     /**
      * Record a song play. Handles deduplication of songs and artists.
      */
@@ -31,20 +38,38 @@ class MusicRepository @Inject constructor(
         sourceApp: String,
         startedAt: Long,
         durationMs: Long,
-        completed: Boolean
+        completed: Boolean,
+        albumArtUrl: String? = null
     ): ListeningEvent {
         // Upsert artist — insert is IGNORE so duplicates are silently skipped
         val existingArtist = artistDao.findByName(artist)
         if (existingArtist == null) {
             artistDao.insert(Artist(name = artist, firstHeardAt = startedAt))
+            fetchArtistImage(artist)
+        } else if (existingArtist.imageUrl == null) {
+            fetchArtistImage(artist)
         }
 
         // Upsert song — insert is IGNORE so duplicates are silently skipped
         val existingSong = songDao.findByTitleAndArtist(title, artist)
         val songId = if (existingSong != null) {
+            if (existingSong.albumArtUrl == null && albumArtUrl != null) {
+                songDao.updateAlbumArtUrl(existingSong.id, albumArtUrl)
+            }
             existingSong.id
         } else {
-            songDao.insert(Song(title = title, artist = artist, album = album, firstHeardAt = startedAt))
+            songDao.insert(Song(
+                title = title,
+                artist = artist,
+                album = album,
+                firstHeardAt = startedAt,
+                albumArtUrl = albumArtUrl
+            ))
+        }
+
+        // If no album art from media session, try Deezer as fallback
+        if (albumArtUrl == null && (existingSong == null || existingSong.albumArtUrl == null)) {
+            fetchAlbumArt(songId, title, artist)
         }
 
         // Insert listening event
@@ -137,4 +162,50 @@ class MusicRepository @Inject constructor(
     fun getAllArtists(): Flow<List<Artist>> = artistDao.getAllArtists()
 
     fun getTotalArtistCount(): Flow<Int> = artistDao.getTotalArtistCount()
+
+    fun getArtistImageUrl(name: String): Flow<String?> = artistDao.getArtistImageUrl(name)
+
+    private fun fetchAlbumArt(songId: Long, title: String, artist: String) {
+        scope.launch {
+            val url = artistImageFetcher.fetchAlbumArtUrl(title, artist)
+            if (url != null) {
+                songDao.updateAlbumArtUrl(songId, url)
+            }
+        }
+    }
+
+    private fun fetchArtistImage(artistName: String) {
+        scope.launch {
+            val url = artistImageFetcher.fetchImageUrl(artistName)
+            if (url != null) {
+                artistDao.updateImageUrl(artistName, url)
+            }
+        }
+    }
+
+    fun backfillAlbumArt() {
+        scope.launch {
+            val songs = songDao.getSongsWithoutAlbumArt()
+            for (song in songs) {
+                val url = artistImageFetcher.fetchAlbumArtUrl(song.title, song.artist)
+                if (url != null) {
+                    songDao.updateAlbumArtUrl(song.id, url)
+                }
+                kotlinx.coroutines.delay(500)
+            }
+        }
+    }
+
+    fun backfillArtistImages() {
+        scope.launch {
+            val artists = artistDao.getArtistsWithoutImage()
+            for (artist in artists) {
+                val url = artistImageFetcher.fetchImageUrl(artist.name)
+                if (url != null) {
+                    artistDao.updateImageUrl(artist.name, url)
+                }
+                kotlinx.coroutines.delay(500) // ~2 req/sec to be respectful
+            }
+        }
+    }
 }

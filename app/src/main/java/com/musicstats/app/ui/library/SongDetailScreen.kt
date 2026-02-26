@@ -19,7 +19,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.musicstats.app.data.model.ListeningEvent
 import com.musicstats.app.util.formatDuration
@@ -60,6 +65,17 @@ fun SongDetailScreen(
         // Header
         item {
             Spacer(modifier = Modifier.height(16.dp))
+            if (currentSong.albumArtUrl != null) {
+                AsyncImage(
+                    model = currentSong.albumArtUrl,
+                    contentDescription = "Album art",
+                    modifier = Modifier
+                        .size(160.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
             Text(
                 text = currentSong.title,
                 style = MaterialTheme.typography.headlineMedium

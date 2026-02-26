@@ -6,6 +6,7 @@ import com.musicstats.app.data.dao.SongDao
 import com.musicstats.app.data.model.Artist
 import com.musicstats.app.data.model.ListeningEvent
 import com.musicstats.app.data.model.Song
+import com.musicstats.app.data.remote.ArtistImageFetcher
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -19,6 +20,7 @@ class MusicRepositoryTest {
     private lateinit var songDao: SongDao
     private lateinit var artistDao: ArtistDao
     private lateinit var eventDao: ListeningEventDao
+    private lateinit var artistImageFetcher: ArtistImageFetcher
     private lateinit var repository: MusicRepository
 
     @Before
@@ -26,7 +28,8 @@ class MusicRepositoryTest {
         songDao = mockk(relaxed = true)
         artistDao = mockk(relaxed = true)
         eventDao = mockk(relaxed = true)
-        repository = MusicRepository(songDao, artistDao, eventDao)
+        artistImageFetcher = mockk(relaxed = true)
+        repository = MusicRepository(songDao, artistDao, eventDao, artistImageFetcher)
     }
 
     @Test

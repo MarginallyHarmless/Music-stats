@@ -11,6 +11,10 @@ import com.musicstats.app.util.startOfWeek
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
@@ -19,6 +23,11 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val repository: MusicRepository
 ) : ViewModel() {
+
+    init {
+        repository.backfillArtistImages()
+        repository.backfillAlbumArt()
+    }
 
     val todayListeningTimeMs: StateFlow<Long> =
         repository.getListeningTimeSince(startOfToday())
@@ -32,9 +41,16 @@ class HomeViewModel @Inject constructor(
         repository.getSkipCountSince(startOfToday())
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    val topArtistToday: StateFlow<String?> =
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val topArtistToday: StateFlow<TopArtistInfo?> =
         repository.getTopArtistsByDuration(startOfToday(), 1)
             .map { artists -> artists.firstOrNull()?.artist }
+            .flatMapLatest { name ->
+                if (name == null) flowOf(null)
+                else repository.getArtistImageUrl(name).map { imageUrl ->
+                    TopArtistInfo(name, imageUrl)
+                }
+            }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val weeklyDailyListening: StateFlow<List<DailyListening>> =
@@ -79,3 +95,8 @@ class HomeViewModel @Inject constructor(
         return streak
     }
 }
+
+data class TopArtistInfo(
+    val name: String,
+    val imageUrl: String?
+)

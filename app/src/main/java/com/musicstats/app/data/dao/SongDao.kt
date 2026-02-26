@@ -45,4 +45,10 @@ interface SongDao {
         """
     )
     fun getTopSongsByTime(limit: Int = 10): Flow<List<Song>>
+
+    @Query("UPDATE songs SET albumArtUrl = :url WHERE id = :songId")
+    suspend fun updateAlbumArtUrl(songId: Long, url: String)
+
+    @Query("SELECT * FROM songs WHERE albumArtUrl IS NULL")
+    suspend fun getSongsWithoutAlbumArt(): List<Song>
 }

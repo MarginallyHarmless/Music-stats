@@ -11,5 +11,6 @@ import androidx.room.PrimaryKey
 data class Artist(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    val firstHeardAt: Long
+    val firstHeardAt: Long,
+    val imageUrl: String? = null
 )

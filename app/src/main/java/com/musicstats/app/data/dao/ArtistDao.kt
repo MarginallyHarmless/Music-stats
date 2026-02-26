@@ -24,4 +24,13 @@ interface ArtistDao {
 
     @Query("SELECT * FROM artists ORDER BY name ASC")
     suspend fun getAllArtistsSnapshot(): List<Artist>
+
+    @Query("UPDATE artists SET imageUrl = :imageUrl WHERE name = :name")
+    suspend fun updateImageUrl(name: String, imageUrl: String)
+
+    @Query("SELECT imageUrl FROM artists WHERE name = :name LIMIT 1")
+    fun getArtistImageUrl(name: String): Flow<String?>
+
+    @Query("SELECT * FROM artists WHERE imageUrl IS NULL")
+    suspend fun getArtistsWithoutImage(): List<Artist>
 }

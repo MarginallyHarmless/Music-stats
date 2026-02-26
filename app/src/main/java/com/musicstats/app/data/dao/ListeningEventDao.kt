@@ -12,6 +12,7 @@ data class SongWithStats(
     val title: String,
     val artist: String,
     val album: String?,
+    val albumArtUrl: String?,
     val totalDurationMs: Long,
     val playCount: Int,
     val firstHeardAt: Long
@@ -21,6 +22,7 @@ data class SongPlayStats(
     val songId: Long,
     val title: String,
     val artist: String,
+    val albumArtUrl: String?,
     val totalDurationMs: Long,
     val playCount: Int
 )
@@ -75,7 +77,7 @@ interface ListeningEventDao {
 
     @Query(
         """
-        SELECT le.songId, s.title, s.artist,
+        SELECT le.songId, s.title, s.artist, s.albumArtUrl,
                COALESCE(SUM(le.durationMs), 0) AS totalDurationMs,
                COUNT(le.id) AS playCount
         FROM listening_events le
@@ -90,7 +92,7 @@ interface ListeningEventDao {
 
     @Query(
         """
-        SELECT le.songId, s.title, s.artist,
+        SELECT le.songId, s.title, s.artist, s.albumArtUrl,
                COALESCE(SUM(le.durationMs), 0) AS totalDurationMs,
                COUNT(le.id) AS playCount
         FROM listening_events le
@@ -226,7 +228,7 @@ interface ListeningEventDao {
 
     @Query(
         """
-        SELECT le.songId, s.title, s.artist,
+        SELECT le.songId, s.title, s.artist, s.albumArtUrl,
                COALESCE(SUM(le.durationMs), 0) AS totalDurationMs,
                COUNT(le.id) AS playCount
         FROM listening_events le
@@ -242,7 +244,7 @@ interface ListeningEventDao {
 
     @Query(
         """
-        SELECT s.id AS songId, s.title, s.artist, s.album,
+        SELECT s.id AS songId, s.title, s.artist, s.album, s.albumArtUrl,
                COALESCE(SUM(le.durationMs), 0) AS totalDurationMs,
                COUNT(le.id) AS playCount,
                s.firstHeardAt
@@ -264,7 +266,7 @@ interface ListeningEventDao {
 
     @Query(
         """
-        SELECT le.songId, s.title, s.artist,
+        SELECT le.songId, s.title, s.artist, s.albumArtUrl,
                COALESCE(SUM(le.durationMs), 0) AS totalDurationMs,
                COUNT(le.id) AS playCount
         FROM listening_events le
