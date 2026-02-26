@@ -11,6 +11,7 @@ import com.musicstats.app.ui.home.HomeScreen
 import com.musicstats.app.ui.library.LibraryScreen
 import com.musicstats.app.ui.library.SongDetailScreen
 import com.musicstats.app.ui.onboarding.OnboardingScreen
+import com.musicstats.app.ui.settings.SettingsScreen
 import com.musicstats.app.ui.stats.StatsScreen
 
 @Composable
@@ -35,8 +36,7 @@ fun NavGraph(navController: NavHostController, startDestination: String, modifie
             })
         }
         composable("settings") {
-            // Placeholder — Task 12
-            androidx.compose.material3.Text("Settings")
+            SettingsScreen()
         }
         composable(
             "song/{songId}",
