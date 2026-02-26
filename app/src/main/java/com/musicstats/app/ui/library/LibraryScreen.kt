@@ -18,14 +18,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,6 +34,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -42,6 +46,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.musicstats.app.data.dao.ArtistWithStats
 import com.musicstats.app.data.dao.SongWithStats
+import com.musicstats.app.ui.components.AppPillTabs
+import com.musicstats.app.ui.components.PillChip
 import com.musicstats.app.util.formatDuration
 
 @Composable
@@ -63,7 +69,7 @@ fun LibraryScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 24.dp)
     ) {
         Text(
             text = "Library",
@@ -71,18 +77,11 @@ fun LibraryScreen(
             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
         )
 
-        TabRow(selectedTabIndex = selectedTab) {
-            Tab(
-                selected = selectedTab == 0,
-                onClick = { selectedTab = 0 },
-                text = { Text("Songs") }
-            )
-            Tab(
-                selected = selectedTab == 1,
-                onClick = { selectedTab = 1 },
-                text = { Text("Artists") }
-            )
-        }
+        AppPillTabs(
+            tabs = listOf("Songs", "Artists"),
+            selectedIndex = selectedTab,
+            onTabSelected = { selectedTab = it }
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -116,31 +115,34 @@ private fun SongsTab(
     onSortChange: (SortMode) -> Unit,
     onSongClick: (Long) -> Unit
 ) {
-    OutlinedTextField(
+    TextField(
         value = searchQuery,
         onValueChange = onSearchChange,
         modifier = Modifier.fillMaxWidth(),
         placeholder = { Text("Search songs or artists") },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-        singleLine = true
+        singleLine = true,
+        shape = RoundedCornerShape(28.dp),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent
+        )
     )
 
     Spacer(modifier = Modifier.height(8.dp))
 
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         SortMode.entries.forEach { mode ->
-            FilterChip(
+            PillChip(
+                label = when (mode) {
+                    SortMode.MostPlayed -> "Most Played"
+                    SortMode.MostRecent -> "Recent"
+                    SortMode.Alphabetical -> "A-Z"
+                },
                 selected = sortMode == mode,
-                onClick = { onSortChange(mode) },
-                label = {
-                    Text(
-                        when (mode) {
-                            SortMode.MostPlayed -> "Most Played"
-                            SortMode.MostRecent -> "Recent"
-                            SortMode.Alphabetical -> "A-Z"
-                        }
-                    )
-                }
+                onClick = { onSortChange(mode) }
             )
         }
     }
@@ -160,10 +162,9 @@ private fun SongsTab(
             )
         }
     } else {
-        LazyColumn {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(songs, key = { it.songId }) { song ->
                 SongListItem(song = song, onClick = { onSongClick(song.songId) })
-                HorizontalDivider()
             }
         }
     }
@@ -178,31 +179,34 @@ private fun ArtistsTab(
     onSortChange: (SortMode) -> Unit,
     onArtistClick: (String) -> Unit
 ) {
-    OutlinedTextField(
+    TextField(
         value = searchQuery,
         onValueChange = onSearchChange,
         modifier = Modifier.fillMaxWidth(),
         placeholder = { Text("Search artists") },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-        singleLine = true
+        singleLine = true,
+        shape = RoundedCornerShape(28.dp),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent
+        )
     )
 
     Spacer(modifier = Modifier.height(8.dp))
 
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         SortMode.entries.forEach { mode ->
-            FilterChip(
+            PillChip(
+                label = when (mode) {
+                    SortMode.MostPlayed -> "Most Played"
+                    SortMode.MostRecent -> "Recent"
+                    SortMode.Alphabetical -> "A-Z"
+                },
                 selected = sortMode == mode,
-                onClick = { onSortChange(mode) },
-                label = {
-                    Text(
-                        when (mode) {
-                            SortMode.MostPlayed -> "Most Played"
-                            SortMode.MostRecent -> "Recent"
-                            SortMode.Alphabetical -> "A-Z"
-                        }
-                    )
-                }
+                onClick = { onSortChange(mode) }
             )
         }
     }
@@ -222,10 +226,9 @@ private fun ArtistsTab(
             )
         }
     } else {
-        LazyColumn {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(artists, key = { it.name }) { artist ->
                 ArtistListItem(artist = artist, onClick = { onArtistClick(artist.name) })
-                HorizontalDivider()
             }
         }
     }
@@ -233,107 +236,141 @@ private fun ArtistsTab(
 
 @Composable
 private fun SongListItem(song: SongWithStats, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    val accentColor = MaterialTheme.colorScheme.primary
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        )
     ) {
-        if (song.albumArtUrl != null) {
-            AsyncImage(
-                model = song.albumArtUrl,
-                contentDescription = "Album art",
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(6.dp)),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            Icon(
-                imageVector = Icons.Default.MusicNote,
-                contentDescription = "Album art",
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = song.title,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = song.artist,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Column(horizontalAlignment = Alignment.End) {
-            Text(
-                text = "${song.playCount} plays",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = formatDuration(song.totalDurationMs),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .drawBehind {
+                    drawRoundRect(
+                        color = accentColor,
+                        topLeft = Offset(0f, 0f),
+                        size = Size(4.dp.toPx(), size.height),
+                        cornerRadius = CornerRadius(2.dp.toPx())
+                    )
+                }
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (song.albumArtUrl != null) {
+                AsyncImage(
+                    model = song.albumArtUrl,
+                    contentDescription = "Album art",
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(6.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.MusicNote,
+                    contentDescription = "Album art",
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = song.artist,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "${song.playCount} plays",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = formatDuration(song.totalDurationMs),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun ArtistListItem(artist: ArtistWithStats, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    val accentColor = MaterialTheme.colorScheme.primary
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        )
     ) {
-        if (artist.imageUrl != null) {
-            AsyncImage(
-                model = artist.imageUrl,
-                contentDescription = "Artist image",
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(24.dp)),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = "Artist image",
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = artist.name,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Column(horizontalAlignment = Alignment.End) {
-            Text(
-                text = "${artist.playCount} plays",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = formatDuration(artist.totalDurationMs),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .drawBehind {
+                    drawRoundRect(
+                        color = accentColor,
+                        topLeft = Offset(0f, 0f),
+                        size = Size(4.dp.toPx(), size.height),
+                        cornerRadius = CornerRadius(2.dp.toPx())
+                    )
+                }
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (artist.imageUrl != null) {
+                AsyncImage(
+                    model = artist.imageUrl,
+                    contentDescription = "Artist image",
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(24.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Artist image",
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = artist.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "${artist.playCount} plays",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = formatDuration(artist.totalDurationMs),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
