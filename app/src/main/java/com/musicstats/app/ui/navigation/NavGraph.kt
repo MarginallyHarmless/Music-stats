@@ -7,6 +7,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.musicstats.app.ui.home.HomeScreen
 import com.musicstats.app.ui.onboarding.OnboardingScreen
 
 @Composable
@@ -20,8 +21,7 @@ fun NavGraph(navController: NavHostController, startDestination: String, modifie
             })
         }
         composable("home") {
-            // Placeholder — Task 9
-            androidx.compose.material3.Text("Home Dashboard")
+            HomeScreen()
         }
         composable("stats") {
             // Placeholder — Task 10

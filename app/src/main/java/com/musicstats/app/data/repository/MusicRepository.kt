@@ -64,6 +64,8 @@ class MusicRepository @Inject constructor(
 
     suspend fun getListeningTimeSince(since: Long): Long = eventDao.getListeningTimeSince(since)
 
+    suspend fun getSongCountSince(since: Long): Int = eventDao.getSongCountSince(since)
+
     // --- Top songs ---
 
     fun getTopSongsByDuration(since: Long = 0, limit: Int = 10): Flow<List<SongPlayStats>> =
