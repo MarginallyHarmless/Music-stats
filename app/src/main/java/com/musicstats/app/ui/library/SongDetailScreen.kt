@@ -1,6 +1,8 @@
 package com.musicstats.app.ui.library
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,10 +10,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,14 +25,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil3.compose.AsyncImage
 import com.musicstats.app.data.model.ListeningEvent
+import com.musicstats.app.ui.components.SectionHeader
+import com.musicstats.app.ui.components.StatCard
 import com.musicstats.app.util.formatDuration
 import java.time.Instant
 import java.time.ZoneId
@@ -60,39 +67,58 @@ fun SongDetailScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 24.dp)
     ) {
-        // Header
+        // Share button
         item {
             Spacer(modifier = Modifier.height(16.dp))
-            if (currentSong.albumArtUrl != null) {
-                AsyncImage(
-                    model = currentSong.albumArtUrl,
-                    contentDescription = "Album art",
-                    modifier = Modifier
-                        .size(160.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(modifier = Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                IconButton(onClick = { /* wired in Task 8 */ }) {
+                    Icon(
+                        Icons.Default.Share,
+                        contentDescription = "Share",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
-            Text(
-                text = currentSong.title,
-                style = MaterialTheme.typography.headlineMedium
-            )
-            Text(
-                text = currentSong.artist,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            if (!currentSong.album.isNullOrBlank()) {
+        }
+
+        // Hero header
+        item {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (currentSong.albumArtUrl != null) {
+                    AsyncImage(
+                        model = currentSong.albumArtUrl,
+                        contentDescription = "Album art",
+                        modifier = Modifier
+                            .size(200.dp)
+                            .shadow(8.dp, RoundedCornerShape(16.dp))
+                            .clip(RoundedCornerShape(16.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
                 Text(
-                    text = currentSong.album,
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = currentSong.title,
+                    style = MaterialTheme.typography.headlineMedium
+                )
+                Text(
+                    text = currentSong.artist,
+                    style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (!currentSong.album.isNullOrBlank()) {
+                    Text(
+                        text = currentSong.album,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
         }
 
         // Stats row
@@ -101,37 +127,38 @@ fun SongDetailScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                StatBox(
+                StatCard(
                     label = "Plays",
                     value = "$totalPlayCount",
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                     modifier = Modifier.weight(1f)
                 )
-                StatBox(
+                StatCard(
                     label = "Total Time",
                     value = formatDuration(totalListeningTime),
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
                     modifier = Modifier.weight(1f)
                 )
-                StatBox(
+                StatCard(
                     label = "Skips",
                     value = "$skipCount",
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
                     modifier = Modifier.weight(1f)
                 )
-                StatBox(
+                StatCard(
                     label = "Skip Rate",
                     value = "${(skipRate * 100).toInt()}%",
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     modifier = Modifier.weight(1f)
                 )
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
         }
 
         // History header
         item {
-            Text(
-                text = "Listening History",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            SectionHeader("Listening History")
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
         if (history.isEmpty()) {
@@ -144,64 +171,48 @@ fun SongDetailScreen(
             }
         } else {
             items(history, key = { it.id }) { event ->
-                EventItem(event)
-                HorizontalDivider()
+                val formatter = DateTimeFormatter.ofPattern("MMM d, yyyy h:mm a", Locale.getDefault())
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = Instant.ofEpochMilli(event.startedAt)
+                                .atZone(ZoneId.systemDefault())
+                                .format(formatter),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    shape = RoundedCornerShape(50)
+                                )
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = friendlyAppName(event.sourceApp),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
+                    Text(
+                        text = formatDuration(event.durationMs),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
         }
 
         // Bottom padding
         item {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
         }
-    }
-}
-
-@Composable
-private fun StatBox(label: String, value: String, modifier: Modifier = Modifier) {
-    ElevatedCard(modifier = modifier) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleLarge
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun EventItem(event: ListeningEvent) {
-    val formatter = DateTimeFormatter.ofPattern("MMM d, yyyy h:mm a", Locale.getDefault())
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = Instant.ofEpochMilli(event.startedAt).atZone(ZoneId.systemDefault()).format(formatter),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = friendlyAppName(event.sourceApp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Text(
-            text = formatDuration(event.durationMs),
-            style = MaterialTheme.typography.bodyMedium
-        )
     }
 }
 
