@@ -59,6 +59,10 @@ import com.musicstats.app.ui.components.GradientCard
 import com.musicstats.app.ui.components.ListeningTimeChart
 import com.musicstats.app.ui.components.SectionHeader
 import com.musicstats.app.ui.components.StatCard
+import com.musicstats.app.ui.share.DailyRecapCard
+import com.musicstats.app.ui.share.ShareBottomSheet
+import com.musicstats.app.ui.share.ShareCardRenderer
+import com.musicstats.app.ui.theme.MusicStatsTheme
 import com.musicstats.app.util.formatDuration
 
 @Composable
@@ -74,6 +78,7 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var listenerEnabled by remember { mutableStateOf(isNotificationListenerEnabled(context)) }
+    var showShareSheet by remember { mutableStateOf(false) }
 
     androidx.compose.runtime.LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -384,14 +389,37 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
             }
         }
 
-        // 8. Share FAB placeholder
+        // 8. Share FAB
         FloatingActionButton(
-            onClick = { /* wired in Task 8 */ },
+            onClick = { showShareSheet = true },
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
             Icon(
                 imageVector = Icons.Default.Share,
                 contentDescription = "Share"
+            )
+        }
+
+        if (showShareSheet) {
+            ShareBottomSheet(
+                onDismiss = { showShareSheet = false },
+                onDailyRecap = {
+                    val density = context.resources.displayMetrics.density
+                    val w = (360 * density).toInt()
+                    val h = (640 * density).toInt()
+                    ShareCardRenderer.renderComposable(context, w, h, {
+                        MusicStatsTheme {
+                            DailyRecapCard(
+                                listeningTimeMs = todayMs,
+                                topArtistName = topArtistInfo?.name,
+                                topArtistImageUrl = topArtistInfo?.imageUrl,
+                                topSongs = topSongs.take(3).map { it.title to it.artist }
+                            )
+                        }
+                    }) { bitmap ->
+                        ShareCardRenderer.shareBitmap(context, bitmap)
+                    }
+                }
             )
         }
 

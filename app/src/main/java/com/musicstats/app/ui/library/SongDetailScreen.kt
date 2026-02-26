@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -34,6 +35,9 @@ import coil3.compose.AsyncImage
 import com.musicstats.app.data.model.ListeningEvent
 import com.musicstats.app.ui.components.SectionHeader
 import com.musicstats.app.ui.components.StatCard
+import com.musicstats.app.ui.share.ShareCardRenderer
+import com.musicstats.app.ui.share.SongSpotlightCard
+import com.musicstats.app.ui.theme.MusicStatsTheme
 import com.musicstats.app.util.formatDuration
 import java.time.Instant
 import java.time.ZoneId
@@ -50,6 +54,8 @@ fun SongDetailScreen(
     val skipRate by viewModel.skipRate.collectAsState()
     val skipCount by viewModel.skipCount.collectAsState()
     val history by viewModel.listeningHistory.collectAsState()
+
+    val context = LocalContext.current
 
     if (song == null) {
         Column(
@@ -73,7 +79,24 @@ fun SongDetailScreen(
         item {
             Spacer(modifier = Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                IconButton(onClick = { /* wired in Task 8 */ }) {
+                IconButton(onClick = {
+                    val density = context.resources.displayMetrics.density
+                    val w = (360 * density).toInt()
+                    val h = (640 * density).toInt()
+                    ShareCardRenderer.renderComposable(context, w, h, {
+                        MusicStatsTheme {
+                            SongSpotlightCard(
+                                title = currentSong.title,
+                                artist = currentSong.artist,
+                                albumArtUrl = currentSong.albumArtUrl,
+                                playCount = totalPlayCount,
+                                totalTimeMs = totalListeningTime
+                            )
+                        }
+                    }) { bitmap ->
+                        ShareCardRenderer.shareBitmap(context, bitmap)
+                    }
+                }) {
                     Icon(
                         Icons.Default.Share,
                         contentDescription = "Share",

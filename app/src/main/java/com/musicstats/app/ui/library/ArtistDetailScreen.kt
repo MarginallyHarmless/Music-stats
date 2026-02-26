@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -39,6 +40,9 @@ import com.musicstats.app.data.dao.ArtistListeningEvent
 import com.musicstats.app.data.dao.ArtistStats
 import com.musicstats.app.ui.components.SectionHeader
 import com.musicstats.app.ui.components.StatCard
+import com.musicstats.app.ui.share.ArtistSpotlightCard
+import com.musicstats.app.ui.share.ShareCardRenderer
+import com.musicstats.app.ui.theme.MusicStatsTheme
 import com.musicstats.app.util.formatDuration
 import java.time.Instant
 import java.time.ZoneId
@@ -49,6 +53,7 @@ import java.util.Locale
 fun ArtistDetailScreen(
     viewModel: ArtistDetailViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val imageUrl by viewModel.imageUrl.collectAsState()
     val stats by viewModel.stats.collectAsState()
     val history by viewModel.listeningHistory.collectAsState()
@@ -67,7 +72,24 @@ fun ArtistDetailScreen(
         item {
             Spacer(modifier = Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                IconButton(onClick = { /* wired in Task 8 */ }) {
+                IconButton(onClick = {
+                    val currentStats = stats
+                    val density = context.resources.displayMetrics.density
+                    val w = (360 * density).toInt()
+                    val h = (640 * density).toInt()
+                    ShareCardRenderer.renderComposable(context, w, h, {
+                        MusicStatsTheme {
+                            ArtistSpotlightCard(
+                                name = viewModel.artistName,
+                                imageUrl = imageUrl,
+                                playCount = currentStats?.totalEvents ?: 0,
+                                totalTimeMs = currentStats?.totalDurationMs ?: 0L
+                            )
+                        }
+                    }) { bitmap ->
+                        ShareCardRenderer.shareBitmap(context, bitmap)
+                    }
+                }) {
                     Icon(
                         Icons.Default.Share,
                         contentDescription = "Share",
