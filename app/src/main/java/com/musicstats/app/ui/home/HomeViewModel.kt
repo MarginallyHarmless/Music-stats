@@ -24,6 +24,22 @@ class HomeViewModel @Inject constructor(
     private val repository: MusicRepository
 ) : ViewModel() {
 
+    val greeting: String
+        get() {
+            val hour = java.time.LocalTime.now().hour
+            return when {
+                hour < 12 -> "Good morning"
+                hour < 17 -> "Good afternoon"
+                else -> "Good evening"
+            }
+        }
+
+    val todayFormatted: String
+        get() {
+            val today = java.time.LocalDate.now()
+            return today.format(java.time.format.DateTimeFormatter.ofPattern("EEEE, MMMM d"))
+        }
+
     init {
         repository.backfillArtistImages()
         repository.backfillAlbumArt()

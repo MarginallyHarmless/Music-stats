@@ -3,7 +3,9 @@ package com.musicstats.app.ui.home
 import android.content.ComponentName
 import android.content.Intent
 import android.provider.Settings
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,19 +15,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -38,17 +41,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import coil3.compose.AsyncImage
 import com.musicstats.app.service.MusicNotificationListener
+import com.musicstats.app.ui.components.GradientCard
 import com.musicstats.app.ui.components.ListeningTimeChart
+import com.musicstats.app.ui.components.SectionHeader
 import com.musicstats.app.ui.components.StatCard
 import com.musicstats.app.util.formatDuration
 
@@ -76,15 +85,33 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // Warning banner when notification listener is disabled
+        Spacer(Modifier.height(0.dp))
+
+        // 1. Greeting header
+        Column {
+            Text(
+                text = viewModel.greeting,
+                style = MaterialTheme.typography.headlineLarge
+            )
+            Text(
+                text = viewModel.todayFormatted.uppercase(),
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    letterSpacing = 1.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        // 2. Notification warning banner
         if (!listenerEnabled) {
             Card(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer
                 ),
+                shape = MaterialTheme.shapes.large,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -120,95 +147,29 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
             }
         }
 
-        // Hero card — today's listening time
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        // 3. Hero gradient card
+        GradientCard {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    imageVector = Icons.Default.MusicNote,
-                    contentDescription = "Listening time",
-                    modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
                 Text(
                     text = formatDuration(todayMs),
-                    style = MaterialTheme.typography.displayMedium,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.displayLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Text(
-                    text = "listened today",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = "LISTENED TODAY",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        letterSpacing = 1.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
             }
         }
 
-        // Top Artist card — full width with thumbnail
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                if (topArtistInfo?.imageUrl != null) {
-                    AsyncImage(
-                        model = topArtistInfo?.imageUrl,
-                        contentDescription = "Artist photo",
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Artist",
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = topArtistInfo?.name ?: "\u2014",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1
-                    )
-                    Text(
-                        text = "Top artist today",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                if (topArtistInfo != null) {
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = "${topArtistInfo?.playCount} plays",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = formatDuration(topArtistInfo?.totalDurationMs ?: 0L),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        }
-
-        // Stat cards row
+        // 4. Today's stat pills row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -233,12 +194,116 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
             )
         }
 
-        // Weekly chart
-        Text(
-            text = "This Week",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
+        // 5. Top artist spotlight
+        if (topArtistInfo != null) {
+            ElevatedCard(
+                shape = MaterialTheme.shapes.large,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box {
+                    if (topArtistInfo?.imageUrl != null) {
+                        AsyncImage(
+                            model = topArtistInfo?.imageUrl,
+                            contentDescription = "Artist photo",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(Color.Black.copy(alpha = 0.55f))
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp)
+                                .background(
+                                    Brush.linearGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.primaryContainer,
+                                            MaterialTheme.colorScheme.tertiaryContainer
+                                        )
+                                    )
+                                )
+                        )
+                    }
+                    Column(
+                        modifier = Modifier
+                            .padding(20.dp)
+                            .align(Alignment.BottomStart)
+                    ) {
+                        Text(
+                            text = topArtistInfo?.name ?: "",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Top artist today",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(top = 8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        Color.White.copy(alpha = 0.15f),
+                                        RoundedCornerShape(50)
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "${topArtistInfo?.playCount} plays",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        Color.White.copy(alpha = 0.15f),
+                                        RoundedCornerShape(50)
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = formatDuration(topArtistInfo?.totalDurationMs ?: 0L),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            ElevatedCard(
+                shape = MaterialTheme.shapes.large,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No listening data yet",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        // 6. Weekly chart section
+        SectionHeader("This Week")
         ListeningTimeChart(
             dailyData = weeklyData,
             modifier = Modifier
@@ -246,12 +311,8 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
                 .height(200.dp)
         )
 
-        // Top songs this week
-        Text(
-            text = "Top Songs This Week",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
+        // 7. Top songs this week
+        SectionHeader("Top Songs This Week")
 
         if (topSongs.isEmpty()) {
             Text(
@@ -261,60 +322,81 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
             )
         } else {
             topSongs.forEachIndexed { index, song ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ElevatedCard(
+                    shape = MaterialTheme.shapes.medium,
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = "${index + 1}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    if (song.albumArtUrl != null) {
-                        AsyncImage(
-                            model = song.albumArtUrl,
-                            contentDescription = "Album art",
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(MaterialTheme.shapes.small),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.MusicNote,
-                            contentDescription = "Album art",
-                            modifier = Modifier.size(40.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                         Text(
-                            text = song.title,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1
+                            text = "${index + 1}",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
                         )
+                        if (song.albumArtUrl != null) {
+                            AsyncImage(
+                                model = song.albumArtUrl,
+                                contentDescription = "Album art",
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(MaterialTheme.shapes.small),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.MusicNote,
+                                contentDescription = "Album art",
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = song.title,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = song.artist,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
                         Text(
-                            text = song.artist,
-                            style = MaterialTheme.typography.bodySmall,
+                            text = "${song.playCount} plays",
+                            style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1
+                            textAlign = TextAlign.End
                         )
                     }
-                    Text(
-                        text = "${song.playCount} plays",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        // 8. Share FAB placeholder
+        FloatingActionButton(
+            onClick = { /* wired in Task 8 */ },
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Share,
+                contentDescription = "Share"
+            )
+        }
+
+        // 9. Bottom spacer
+        Spacer(Modifier.height(16.dp))
     }
 }
 
