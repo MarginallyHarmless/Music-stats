@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.MusicStats" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.MusicStats" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowBackground">@color/deep_background</item>
+    </style>
+
+    <color name="deep_background">#FF0A0A0F</color>
 </resources>
