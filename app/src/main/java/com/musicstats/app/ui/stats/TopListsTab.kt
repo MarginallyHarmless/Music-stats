@@ -1,5 +1,6 @@
 package com.musicstats.app.ui.stats
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,8 +15,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -25,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.musicstats.app.ui.components.PillChip
 import com.musicstats.app.ui.components.SectionHeader
+import com.musicstats.app.ui.theme.LocalAlbumPalette
 import com.musicstats.app.util.formatDuration
 
 @Composable
@@ -42,6 +45,7 @@ fun TopListsTab(viewModel: StatsViewModel) {
     val artistsByDuration by viewModel.topArtistsByDuration.collectAsState()
 
     val songs = if (metric == TopListMetric.Duration) songsByDuration else songsByPlayCount
+    val palette = LocalAlbumPalette.current
 
     Column(
         modifier = Modifier
@@ -67,18 +71,20 @@ fun TopListsTab(viewModel: StatsViewModel) {
             Text(
                 text = "No listening data yet",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Color.White.copy(alpha = 0.5f)
             )
         } else {
             songs.forEachIndexed { index, song ->
                 val rank = index + 1
                 val isTop3 = rank <= 3
 
-                ElevatedCard(
-                    modifier = Modifier.fillMaxWidth(),
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, palette.glassBorder, MaterialTheme.shapes.medium),
                     shape = MaterialTheme.shapes.medium,
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    colors = CardDefaults.cardColors(
+                        containerColor = palette.glassBackground
                     )
                 ) {
                     Row(
@@ -93,7 +99,7 @@ fun TopListsTab(viewModel: StatsViewModel) {
                             text = "$rank",
                             style = if (isTop3) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = if (isTop3) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (isTop3) palette.accent else Color.White.copy(alpha = 0.6f)
                         )
 
                         // Album art
@@ -115,7 +121,7 @@ fun TopListsTab(viewModel: StatsViewModel) {
                                 Icon(
                                     imageVector = Icons.Default.MusicNote,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = Color.White.copy(alpha = 0.5f),
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
@@ -127,13 +133,14 @@ fun TopListsTab(viewModel: StatsViewModel) {
                                 text = song.title,
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium,
+                                color = Color.White,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = song.artist,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = Color.White.copy(alpha = 0.6f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -147,7 +154,7 @@ fun TopListsTab(viewModel: StatsViewModel) {
                                 "${song.playCount} plays"
                             },
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Color.White.copy(alpha = 0.6f)
                         )
                     }
                 }
@@ -161,18 +168,20 @@ fun TopListsTab(viewModel: StatsViewModel) {
             Text(
                 text = "No listening data yet",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Color.White.copy(alpha = 0.5f)
             )
         } else {
             artistsByDuration.forEachIndexed { index, artist ->
                 val rank = index + 1
                 val isTop3 = rank <= 3
 
-                ElevatedCard(
-                    modifier = Modifier.fillMaxWidth(),
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, palette.glassBorder, MaterialTheme.shapes.medium),
                     shape = MaterialTheme.shapes.medium,
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    colors = CardDefaults.cardColors(
+                        containerColor = palette.glassBackground
                     )
                 ) {
                     Row(
@@ -187,10 +196,10 @@ fun TopListsTab(viewModel: StatsViewModel) {
                             text = "$rank",
                             style = if (isTop3) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = if (isTop3) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (isTop3) palette.accent else Color.White.copy(alpha = 0.6f)
                         )
 
-                        // Artist icon (no imageUrl available)
+                        // Artist icon
                         val iconSize = if (isTop3) 64.dp else 40.dp
                         Box(
                             modifier = Modifier
@@ -201,7 +210,7 @@ fun TopListsTab(viewModel: StatsViewModel) {
                             Icon(
                                 imageVector = Icons.Default.Person,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint = Color.White.copy(alpha = 0.5f),
                                 modifier = Modifier.size(if (isTop3) 32.dp else 20.dp)
                             )
                         }
@@ -211,6 +220,7 @@ fun TopListsTab(viewModel: StatsViewModel) {
                             text = artist.artist,
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Medium,
+                            color = Color.White,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
@@ -224,7 +234,7 @@ fun TopListsTab(viewModel: StatsViewModel) {
                                 "${artist.playCount} plays"
                             },
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Color.White.copy(alpha = 0.6f)
                         )
                     }
                 }

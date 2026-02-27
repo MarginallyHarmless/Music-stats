@@ -19,8 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.musicstats.app.data.dao.HourlyListening
+import com.musicstats.app.ui.theme.LocalAlbumPalette
 
 @Composable
 fun HourlyHeatmap(hourlyData: List<HourlyListening>, modifier: Modifier = Modifier) {
@@ -31,7 +33,7 @@ fun HourlyHeatmap(hourlyData: List<HourlyListening>, modifier: Modifier = Modifi
         hourMap.values.maxOrNull()?.coerceAtLeast(1L) ?: 1L
     }
 
-    val baseColor = MaterialTheme.colorScheme.primaryContainer
+    val baseColor = LocalAlbumPalette.current.accent
 
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         // 4 rows of 6 hours
@@ -56,11 +58,7 @@ fun HourlyHeatmap(hourlyData: List<HourlyListening>, modifier: Modifier = Modifi
                             Text(
                                 text = String.format("%02d", hour),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = if (intensity > 0.5f) {
-                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                }
+                                color = Color.White
                             )
                         }
                     }

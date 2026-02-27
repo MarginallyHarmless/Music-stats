@@ -51,4 +51,27 @@ interface SongDao {
 
     @Query("SELECT * FROM songs WHERE albumArtUrl IS NULL")
     suspend fun getSongsWithoutAlbumArt(): List<Song>
+
+    @Query("""
+        UPDATE songs SET
+            paletteDominant = :dominant,
+            paletteVibrant = :vibrant,
+            paletteMuted = :muted,
+            paletteDarkVibrant = :darkVibrant,
+            paletteDarkMuted = :darkMuted,
+            paletteLightVibrant = :lightVibrant
+        WHERE id = :songId
+    """)
+    suspend fun updatePaletteColors(
+        songId: Long,
+        dominant: Int?,
+        vibrant: Int?,
+        muted: Int?,
+        darkVibrant: Int?,
+        darkMuted: Int?,
+        lightVibrant: Int?
+    )
+
+    @Query("SELECT * FROM songs WHERE albumArtUrl IS NOT NULL AND paletteDominant IS NULL")
+    suspend fun getSongsNeedingPaletteExtraction(): List<Song>
 }

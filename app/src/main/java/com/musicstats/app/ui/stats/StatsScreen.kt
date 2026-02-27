@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.musicstats.app.ui.components.AppPillTabs
+import com.musicstats.app.ui.components.AuroraBackground
 import com.musicstats.app.ui.components.PillChip
 
 @Composable
@@ -28,6 +29,7 @@ fun StatsScreen(viewModel: StatsViewModel = hiltViewModel()) {
     val selectedRange by viewModel.selectedTimeRange.collectAsState()
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
+    AuroraBackground {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -72,5 +74,6 @@ fun StatsScreen(viewModel: StatsViewModel = hiltViewModel()) {
             1 -> DiscoveryStatsTab(viewModel)
             2 -> TopListsTab(viewModel)
         }
+    }
     }
 }

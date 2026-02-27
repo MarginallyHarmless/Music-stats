@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
@@ -29,12 +30,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
+import androidx.compose.runtime.CompositionLocalProvider
 import com.musicstats.app.data.model.ListeningEvent
+import com.musicstats.app.ui.components.AuroraBackground
 import com.musicstats.app.ui.components.SectionHeader
 import com.musicstats.app.ui.components.StatCard
+import com.musicstats.app.ui.theme.AlbumPalette
+import com.musicstats.app.ui.theme.LocalAlbumPalette
+import com.musicstats.app.ui.theme.toAlbumPalette
 import com.musicstats.app.ui.share.ShareCardRenderer
 import com.musicstats.app.ui.share.SongSpotlightCard
 import com.musicstats.app.ui.theme.MusicStatsTheme
@@ -69,7 +77,10 @@ fun SongDetailScreen(
     }
 
     val currentSong = song!!
+    val songPalette = currentSong.toAlbumPalette()
 
+    CompositionLocalProvider(LocalAlbumPalette provides songPalette) {
+    AuroraBackground(palette = songPalette) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -100,7 +111,7 @@ fun SongDetailScreen(
                     Icon(
                         Icons.Default.Share,
                         contentDescription = "Share",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = Color.White.copy(alpha = 0.7f)
                     )
                 }
             }
@@ -113,15 +124,30 @@ fun SongDetailScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 if (currentSong.albumArtUrl != null) {
-                    AsyncImage(
-                        model = currentSong.albumArtUrl,
-                        contentDescription = "Album art",
-                        modifier = Modifier
-                            .size(200.dp)
-                            .shadow(8.dp, RoundedCornerShape(16.dp))
-                            .clip(RoundedCornerShape(16.dp)),
-                        contentScale = ContentScale.Crop
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier
+                                .size(230.dp)
+                                .background(
+                                    Brush.radialGradient(
+                                        colors = listOf(
+                                            LocalAlbumPalette.current.accent.copy(alpha = 0.15f),
+                                            Color.Transparent
+                                        )
+                                    ),
+                                    shape = CircleShape
+                                )
+                        )
+                        AsyncImage(
+                            model = currentSong.albumArtUrl,
+                            contentDescription = "Album art",
+                            modifier = Modifier
+                                .size(200.dp)
+                                .shadow(8.dp, RoundedCornerShape(16.dp))
+                                .clip(RoundedCornerShape(16.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
                 Text(
@@ -131,13 +157,13 @@ fun SongDetailScreen(
                 Text(
                     text = currentSong.artist,
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.White.copy(alpha = 0.7f)
                 )
                 if (!currentSong.album.isNullOrBlank()) {
                     Text(
                         text = currentSong.album,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color.White.copy(alpha = 0.6f)
                     )
                 }
             }
@@ -146,34 +172,37 @@ fun SongDetailScreen(
 
         // Stats row
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                StatCard(
-                    label = "Plays",
-                    value = "$totalPlayCount",
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    label = "Total Time",
-                    value = formatDuration(totalListeningTime),
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    label = "Skips",
-                    value = "$skipCount",
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    label = "Skip Rate",
-                    value = "${(skipRate * 100).toInt()}%",
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier.weight(1f)
-                )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    StatCard(
+                        label = "Plays",
+                        value = "$totalPlayCount",
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatCard(
+                        label = "Total Time",
+                        value = formatDuration(totalListeningTime),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    StatCard(
+                        label = "Skips",
+                        value = "$skipCount",
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatCard(
+                        label = "Skip Rate",
+                        value = "${(skipRate * 100).toInt()}%",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(20.dp))
         }
@@ -189,7 +218,7 @@ fun SongDetailScreen(
                 Text(
                     text = "No listening events yet",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.White.copy(alpha = 0.5f)
                 )
             }
         } else {
@@ -213,14 +242,15 @@ fun SongDetailScreen(
                         Box(
                             modifier = Modifier
                                 .background(
-                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    color = Color.White.copy(alpha = 0.10f),
                                     shape = RoundedCornerShape(50)
                                 )
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
                                 text = friendlyAppName(event.sourceApp),
-                                style = MaterialTheme.typography.labelSmall
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.7f)
                             )
                         }
                     }
@@ -236,6 +266,8 @@ fun SongDetailScreen(
         item {
             Spacer(modifier = Modifier.height(20.dp))
         }
+    }
+    }
     }
 }
 

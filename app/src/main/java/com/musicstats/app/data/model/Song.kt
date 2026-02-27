@@ -16,5 +16,11 @@ data class Song(
     val firstHeardAt: Long,
     val genre: String? = null,
     val releaseYear: Int? = null,
-    val albumArtUrl: String? = null
+    val albumArtUrl: String? = null,
+    val paletteDominant: Int? = null,
+    val paletteVibrant: Int? = null,
+    val paletteMuted: Int? = null,
+    val paletteDarkVibrant: Int? = null,
+    val paletteDarkMuted: Int? = null,
+    val paletteLightVibrant: Int? = null
 )

@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.musicstats.app.ui.components.AuroraBackground
 import kotlinx.coroutines.launch
 
 @Composable
@@ -65,10 +66,7 @@ fun OnboardingScreen(
         pagerState.animateScrollToPage(currentStep)
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
+    AuroraBackground {
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
@@ -120,6 +118,7 @@ fun OnboardingScreen(
         }
     }
 }
+
 
 @Composable
 private fun WelcomePage(onGetStarted: () -> Unit) {

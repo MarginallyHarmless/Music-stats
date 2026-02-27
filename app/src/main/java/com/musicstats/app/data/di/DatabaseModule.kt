@@ -2,6 +2,8 @@ package com.musicstats.app.data.di
 
 import android.content.Context
 import androidx.room.Room
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
 import com.musicstats.app.data.MusicStatsDatabase
 import com.musicstats.app.data.dao.ArtistDao
 import com.musicstats.app.data.dao.ListeningEventDao
@@ -25,7 +27,7 @@ object DatabaseModule {
             MusicStatsDatabase::class.java,
             "music_stats.db"
         )
-            .addMigrations(MusicStatsDatabase.MIGRATION_1_2, MusicStatsDatabase.MIGRATION_2_3, MusicStatsDatabase.MIGRATION_3_4, MusicStatsDatabase.MIGRATION_4_5)
+            .addMigrations(MusicStatsDatabase.MIGRATION_1_2, MusicStatsDatabase.MIGRATION_2_3, MusicStatsDatabase.MIGRATION_3_4, MusicStatsDatabase.MIGRATION_4_5, MusicStatsDatabase.MIGRATION_5_6)
             .build()
     }
 
@@ -38,4 +40,9 @@ object DatabaseModule {
     @Provides
     fun provideListeningEventDao(database: MusicStatsDatabase): ListeningEventDao =
         database.listeningEventDao()
+
+    @Provides
+    @Singleton
+    fun provideImageLoader(@ApplicationContext context: Context): ImageLoader =
+        SingletonImageLoader.get(context)
 }

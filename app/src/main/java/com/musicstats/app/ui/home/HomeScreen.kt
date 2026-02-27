@@ -4,6 +4,8 @@ import android.content.ComponentName
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,7 +28,7 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -55,6 +57,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import coil3.compose.AsyncImage
 import com.musicstats.app.service.MusicNotificationListener
+import com.musicstats.app.ui.components.AuroraBackground
 import com.musicstats.app.ui.components.GradientCard
 import com.musicstats.app.ui.components.ListeningTimeChart
 import com.musicstats.app.ui.components.SectionHeader
@@ -62,6 +65,7 @@ import com.musicstats.app.ui.components.StatCard
 import com.musicstats.app.ui.share.DailyRecapCard
 import com.musicstats.app.ui.share.ShareBottomSheet
 import com.musicstats.app.ui.share.ShareCardRenderer
+import com.musicstats.app.ui.theme.LocalAlbumPalette
 import com.musicstats.app.ui.theme.MusicStatsTheme
 import com.musicstats.app.util.formatDuration
 
@@ -90,6 +94,7 @@ fun HomeScreen(
         }
     }
 
+    AuroraBackground {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -110,7 +115,7 @@ fun HomeScreen(
                 style = MaterialTheme.typography.bodyMedium.copy(
                     letterSpacing = 1.sp
                 ),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Color.White.copy(alpha = 0.6f)
             )
         }
 
@@ -164,16 +169,23 @@ fun HomeScreen(
             ) {
                 Text(
                     text = formatDuration(todayMs),
-                    style = MaterialTheme.typography.displayLarge,
+                    style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = Color.White
+                )
+                Box(
+                    modifier = Modifier
+                        .padding(vertical = 8.dp)
+                        .fillMaxWidth(0.3f)
+                        .height(1.dp)
+                        .background(LocalAlbumPalette.current.accent.copy(alpha = 0.4f))
                 )
                 Text(
                     text = "LISTENED TODAY",
                     style = MaterialTheme.typography.bodyMedium.copy(
                         letterSpacing = 1.sp
                     ),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    color = Color.White.copy(alpha = 0.7f)
                 )
             }
         }
@@ -205,10 +217,11 @@ fun HomeScreen(
 
         // 5. Top artist spotlight
         if (topArtistInfo != null) {
-            ElevatedCard(
+            Card(
                 onClick = { topArtistInfo?.name?.let { onArtistClick(it) } },
                 shape = MaterialTheme.shapes.large,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
             ) {
                 Box {
                     if (topArtistInfo?.imageUrl != null) {
@@ -217,19 +230,26 @@ fun HomeScreen(
                             contentDescription = "Artist photo",
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(160.dp),
+                                .height(200.dp),
                             contentScale = ContentScale.Crop
                         )
                         Box(
                             modifier = Modifier
                                 .matchParentSize()
-                                .background(Color.Black.copy(alpha = 0.55f))
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.Transparent,
+                                            Color(0xFF0A0A0F).copy(alpha = 0.85f)
+                                        )
+                                    )
+                                )
                         )
                     } else {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(160.dp)
+                                .height(200.dp)
                                 .background(
                                     Brush.linearGradient(
                                         colors = listOf(
@@ -263,9 +283,10 @@ fun HomeScreen(
                             Box(
                                 modifier = Modifier
                                     .background(
-                                        Color.White.copy(alpha = 0.15f),
+                                        Color.White.copy(alpha = 0.10f),
                                         RoundedCornerShape(50)
                                     )
+                                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(50))
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
                                 Text(
@@ -277,9 +298,10 @@ fun HomeScreen(
                             Box(
                                 modifier = Modifier
                                     .background(
-                                        Color.White.copy(alpha = 0.15f),
+                                        Color.White.copy(alpha = 0.10f),
                                         RoundedCornerShape(50)
                                     )
+                                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(50))
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
                                 Text(
@@ -293,9 +315,12 @@ fun HomeScreen(
                 }
             }
         } else {
-            ElevatedCard(
+            Card(
                 shape = MaterialTheme.shapes.large,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = LocalAlbumPalette.current.glassBackground
+                )
             ) {
                 Box(
                     modifier = Modifier
@@ -306,7 +331,7 @@ fun HomeScreen(
                     Text(
                         text = "No listening data yet",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color.White.copy(alpha = 0.5f)
                     )
                 }
             }
@@ -328,22 +353,16 @@ fun HomeScreen(
             Text(
                 text = "No listening data yet",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Color.White.copy(alpha = 0.5f)
             )
         } else {
             topSongs.forEachIndexed { index, song ->
-                ElevatedCard(
-                    onClick = { onSongClick(song.songId) },
-                    shape = MaterialTheme.shapes.medium,
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .clickable { onSongClick(song.songId) }
+                            .padding(vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
@@ -367,7 +386,7 @@ fun HomeScreen(
                                 imageVector = Icons.Default.MusicNote,
                                 contentDescription = "Album art",
                                 modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = Color.White.copy(alpha = 0.5f)
                             )
                         }
                         Column(modifier = Modifier.weight(1f)) {
@@ -380,7 +399,7 @@ fun HomeScreen(
                             Text(
                                 text = song.artist,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = Color.White.copy(alpha = 0.6f),
                                 maxLines = 1
                             )
                         }
@@ -388,16 +407,21 @@ fun HomeScreen(
                             Text(
                                 text = formatDuration(song.totalDurationMs),
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = Color.White.copy(alpha = 0.6f),
                                 textAlign = TextAlign.End
                             )
                             Text(
                                 text = "${song.playCount} plays",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                color = Color.White.copy(alpha = 0.5f),
                                 textAlign = TextAlign.End
                             )
                         }
+                    }
+                    if (index < topSongs.lastIndex) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                        )
                     }
                 }
             }
@@ -439,6 +463,7 @@ fun HomeScreen(
 
         // 9. Bottom spacer
         Spacer(Modifier.height(16.dp))
+    }
     }
 }
 

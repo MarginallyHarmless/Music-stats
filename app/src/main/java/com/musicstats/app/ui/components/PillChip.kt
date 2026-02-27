@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.musicstats.app.ui.theme.LocalAlbumPalette
 
 @Composable
 fun PillChip(
@@ -20,14 +21,15 @@ fun PillChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val palette = LocalAlbumPalette.current
     val shape = RoundedCornerShape(50)
     val backgroundColor = if (selected) {
-        MaterialTheme.colorScheme.primaryContainer
+        palette.accent.copy(alpha = 0.2f)
     } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        palette.glassBackground
     }
     val textColor = if (selected) {
-        MaterialTheme.colorScheme.onPrimaryContainer
+        palette.accent
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
     }

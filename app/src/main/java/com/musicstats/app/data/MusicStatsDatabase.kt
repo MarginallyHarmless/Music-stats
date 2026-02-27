@@ -13,7 +13,7 @@ import com.musicstats.app.data.model.Song
 
 @Database(
     entities = [Song::class, Artist::class, ListeningEvent::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class MusicStatsDatabase : RoomDatabase() {
@@ -75,6 +75,17 @@ abstract class MusicStatsDatabase : RoomDatabase() {
                         ) WHERE rn = 1
                     )
                 """)
+            }
+        }
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE songs ADD COLUMN paletteDominant INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE songs ADD COLUMN paletteVibrant INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE songs ADD COLUMN paletteMuted INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE songs ADD COLUMN paletteDarkVibrant INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE songs ADD COLUMN paletteDarkMuted INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE songs ADD COLUMN paletteLightVibrant INTEGER DEFAULT NULL")
             }
         }
     }

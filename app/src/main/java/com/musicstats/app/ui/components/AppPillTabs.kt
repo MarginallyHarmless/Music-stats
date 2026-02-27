@@ -14,8 +14,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.musicstats.app.ui.theme.LocalAlbumPalette
 
 @Composable
 fun AppPillTabs(
@@ -24,11 +26,13 @@ fun AppPillTabs(
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val palette = LocalAlbumPalette.current
+
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(50))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            .background(Color.White.copy(alpha = 0.06f))
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -39,8 +43,8 @@ fun AppPillTabs(
                     .weight(1f)
                     .clip(RoundedCornerShape(50))
                     .background(
-                        if (selected) MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0f)
+                        if (selected) palette.accent.copy(alpha = 0.2f)
+                        else Color.Transparent
                     )
                     .clickable { onTabSelected(index) }
                     .padding(vertical = 10.dp),
@@ -50,7 +54,7 @@ fun AppPillTabs(
                     text = title,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                    color = if (selected) palette.accent
                     else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

@@ -43,6 +43,7 @@ class HomeViewModel @Inject constructor(
     init {
         repository.backfillArtistImages()
         repository.backfillAlbumArt()
+        repository.backfillPaletteColors()
     }
 
     val todayListeningTimeMs: StateFlow<Long> =

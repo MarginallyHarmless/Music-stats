@@ -33,14 +33,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.musicstats.app.data.dao.ArtistListeningEvent
 import com.musicstats.app.data.dao.ArtistStats
+import com.musicstats.app.ui.components.AuroraBackground
 import com.musicstats.app.ui.components.SectionHeader
 import com.musicstats.app.ui.components.StatCard
 import com.musicstats.app.ui.share.ArtistSpotlightCard
+import com.musicstats.app.ui.theme.LocalAlbumPalette
 import com.musicstats.app.ui.share.ShareCardRenderer
 import com.musicstats.app.ui.theme.MusicStatsTheme
 import com.musicstats.app.util.formatDuration
@@ -63,6 +67,7 @@ fun ArtistDetailScreen(
     val skipCount = stats?.skipCount ?: 0
     val skipRate = if (totalEvents > 0) (skipCount * 100) / totalEvents else 0
 
+    AuroraBackground {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -93,7 +98,7 @@ fun ArtistDetailScreen(
                     Icon(
                         Icons.Default.Share,
                         contentDescription = "Share",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = Color.White.copy(alpha = 0.7f)
                     )
                 }
             }
@@ -106,21 +111,36 @@ fun ArtistDetailScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 if (imageUrl != null) {
-                    AsyncImage(
-                        model = imageUrl,
-                        contentDescription = "Artist image",
-                        modifier = Modifier
-                            .size(200.dp)
-                            .shadow(8.dp, CircleShape)
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier
+                                .size(230.dp)
+                                .background(
+                                    Brush.radialGradient(
+                                        colors = listOf(
+                                            LocalAlbumPalette.current.accent.copy(alpha = 0.15f),
+                                            Color.Transparent
+                                        )
+                                    ),
+                                    shape = CircleShape
+                                )
+                        )
+                        AsyncImage(
+                            model = imageUrl,
+                            contentDescription = "Artist image",
+                            modifier = Modifier
+                                .size(200.dp)
+                                .shadow(8.dp, CircleShape)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 } else {
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = "Artist image",
                         modifier = Modifier.size(200.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = Color.White.copy(alpha = 0.4f)
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -134,34 +154,37 @@ fun ArtistDetailScreen(
 
         // Stats row
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                StatCard(
-                    label = "Plays",
-                    value = "$totalEvents",
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    label = "Total Time",
-                    value = formatDuration(totalTime),
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    label = "Skips",
-                    value = "$skipCount",
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    label = "Skip Rate",
-                    value = "$skipRate%",
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier.weight(1f)
-                )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    StatCard(
+                        label = "Plays",
+                        value = "$totalEvents",
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatCard(
+                        label = "Total Time",
+                        value = formatDuration(totalTime),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    StatCard(
+                        label = "Skips",
+                        value = "$skipCount",
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatCard(
+                        label = "Skip Rate",
+                        value = "$skipRate%",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(20.dp))
         }
@@ -177,7 +200,7 @@ fun ArtistDetailScreen(
                 Text(
                     text = "No listening events yet",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.White.copy(alpha = 0.5f)
                 )
             }
         } else {
@@ -194,14 +217,14 @@ fun ArtistDetailScreen(
                         modifier = Modifier
                             .size(32.dp)
                             .clip(RoundedCornerShape(6.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                            .background(Color.White.copy(alpha = 0.06f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.MusicNote,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = Color.White.copy(alpha = 0.5f)
                         )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
@@ -218,14 +241,15 @@ fun ArtistDetailScreen(
                             Box(
                                 modifier = Modifier
                                     .background(
-                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        color = Color.White.copy(alpha = 0.10f),
                                         shape = RoundedCornerShape(50)
                                     )
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
                                 Text(
                                     text = friendlyArtistAppName(event.sourceApp),
-                                    style = MaterialTheme.typography.labelSmall
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(alpha = 0.7f)
                                 )
                             }
                             Text(
@@ -233,7 +257,7 @@ fun ArtistDetailScreen(
                                     .atZone(ZoneId.systemDefault())
                                     .format(formatter),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = Color.White.copy(alpha = 0.6f)
                             )
                         }
                     }
@@ -249,6 +273,7 @@ fun ArtistDetailScreen(
         item {
             Spacer(modifier = Modifier.height(20.dp))
         }
+    }
     }
 }
 

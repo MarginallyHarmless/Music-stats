@@ -1,5 +1,6 @@
 package com.musicstats.app.ui.stats
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,8 +13,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -31,6 +33,7 @@ import coil3.compose.AsyncImage
 import com.musicstats.app.ui.components.GradientCard
 import com.musicstats.app.ui.components.SectionHeader
 import com.musicstats.app.ui.components.StatCard
+import com.musicstats.app.ui.theme.LocalAlbumPalette
 
 @Composable
 fun DiscoveryStatsTab(viewModel: StatsViewModel) {
@@ -57,12 +60,12 @@ fun DiscoveryStatsTab(viewModel: StatsViewModel) {
                     text = "$newSongs",
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = Color.White
                 )
                 Text(
                     text = "new songs discovered",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    color = Color.White.copy(alpha = 0.7f)
                 )
             }
         }
@@ -104,22 +107,24 @@ fun DiscoveryStatsTab(viewModel: StatsViewModel) {
         Text(
             text = "Songs with 50+ plays — your most dedicated listens",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = Color.White.copy(alpha = 0.6f)
         )
 
         if (deepCuts.isEmpty()) {
             Text(
                 text = "No deep cuts yet",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Color.White.copy(alpha = 0.5f)
             )
         } else {
             deepCuts.forEach { song ->
-                ElevatedCard(
-                    modifier = Modifier.fillMaxWidth(),
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, LocalAlbumPalette.current.glassBorder, MaterialTheme.shapes.medium),
                     shape = MaterialTheme.shapes.medium,
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    colors = CardDefaults.cardColors(
+                        containerColor = LocalAlbumPalette.current.glassBackground
                     )
                 ) {
                     Row(
@@ -147,7 +152,7 @@ fun DiscoveryStatsTab(viewModel: StatsViewModel) {
                                 Icon(
                                     imageVector = Icons.Default.MusicNote,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = Color.White.copy(alpha = 0.5f),
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
@@ -159,13 +164,14 @@ fun DiscoveryStatsTab(viewModel: StatsViewModel) {
                                 text = song.title,
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium,
+                                color = Color.White,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = song.artist,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = Color.White.copy(alpha = 0.6f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -175,7 +181,7 @@ fun DiscoveryStatsTab(viewModel: StatsViewModel) {
                         Text(
                             text = "${song.playCount} plays",
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Color.White.copy(alpha = 0.6f)
                         )
                     }
                 }

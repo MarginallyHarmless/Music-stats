@@ -1,5 +1,6 @@
 package com.musicstats.app.ui.library
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,9 +19,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
+
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -47,7 +49,9 @@ import coil3.compose.AsyncImage
 import com.musicstats.app.data.dao.ArtistWithStats
 import com.musicstats.app.data.dao.SongWithStats
 import com.musicstats.app.ui.components.AppPillTabs
+import com.musicstats.app.ui.components.AuroraBackground
 import com.musicstats.app.ui.components.PillChip
+import com.musicstats.app.ui.theme.LocalAlbumPalette
 import com.musicstats.app.util.formatDuration
 
 @Composable
@@ -66,6 +70,7 @@ fun LibraryScreen(
 
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
+    AuroraBackground {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -104,6 +109,7 @@ fun LibraryScreen(
             )
         }
     }
+    }
 }
 
 @Composable
@@ -124,8 +130,8 @@ private fun SongsTab(
         singleLine = true,
         shape = RoundedCornerShape(28.dp),
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            focusedContainerColor = Color.White.copy(alpha = 0.06f),
+            unfocusedContainerColor = Color.White.copy(alpha = 0.06f),
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent
         )
@@ -158,7 +164,7 @@ private fun SongsTab(
             Text(
                 text = if (searchQuery.isBlank()) "No songs tracked yet" else "No results",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Color.White.copy(alpha = 0.5f)
             )
         }
     } else {
@@ -188,8 +194,8 @@ private fun ArtistsTab(
         singleLine = true,
         shape = RoundedCornerShape(28.dp),
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            focusedContainerColor = Color.White.copy(alpha = 0.06f),
+            unfocusedContainerColor = Color.White.copy(alpha = 0.06f),
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent
         )
@@ -222,7 +228,7 @@ private fun ArtistsTab(
             Text(
                 text = if (searchQuery.isBlank()) "No artists tracked yet" else "No results",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = Color.White.copy(alpha = 0.5f)
             )
         }
     } else {
@@ -236,12 +242,15 @@ private fun ArtistsTab(
 
 @Composable
 private fun SongListItem(song: SongWithStats, onClick: () -> Unit) {
-    val accentColor = MaterialTheme.colorScheme.primary
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
+    val palette = LocalAlbumPalette.current
+    val accentColor = palette.accent
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, palette.glassBorder, MaterialTheme.shapes.medium),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        colors = CardDefaults.cardColors(
+            containerColor = palette.glassBackground
         )
     ) {
         Row(
@@ -274,20 +283,21 @@ private fun SongListItem(song: SongWithStats, onClick: () -> Unit) {
                     imageVector = Icons.Default.MusicNote,
                     contentDescription = "Album art",
                     modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = Color.White.copy(alpha = 0.5f)
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = song.title,
                     style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = song.artist,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = Color.White.copy(alpha = 0.6f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -296,12 +306,12 @@ private fun SongListItem(song: SongWithStats, onClick: () -> Unit) {
                 Text(
                     text = "${song.playCount} plays",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.White.copy(alpha = 0.6f)
                 )
                 Text(
                     text = formatDuration(song.totalDurationMs),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.White.copy(alpha = 0.6f)
                 )
             }
         }
@@ -310,12 +320,15 @@ private fun SongListItem(song: SongWithStats, onClick: () -> Unit) {
 
 @Composable
 private fun ArtistListItem(artist: ArtistWithStats, onClick: () -> Unit) {
-    val accentColor = MaterialTheme.colorScheme.primary
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
+    val palette = LocalAlbumPalette.current
+    val accentColor = palette.accent
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, palette.glassBorder, MaterialTheme.shapes.medium),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        colors = CardDefaults.cardColors(
+            containerColor = palette.glassBackground
         )
     ) {
         Row(
@@ -348,7 +361,7 @@ private fun ArtistListItem(artist: ArtistWithStats, onClick: () -> Unit) {
                     imageVector = Icons.Default.Person,
                     contentDescription = "Artist image",
                     modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = Color.White.copy(alpha = 0.5f)
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
@@ -363,12 +376,12 @@ private fun ArtistListItem(artist: ArtistWithStats, onClick: () -> Unit) {
                 Text(
                     text = "${artist.playCount} plays",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.White.copy(alpha = 0.6f)
                 )
                 Text(
                     text = formatDuration(artist.totalDurationMs),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.White.copy(alpha = 0.6f)
                 )
             }
         }

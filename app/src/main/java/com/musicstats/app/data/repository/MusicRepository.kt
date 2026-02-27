@@ -16,6 +16,7 @@ import com.musicstats.app.data.model.Artist
 import com.musicstats.app.data.model.ListeningEvent
 import com.musicstats.app.data.model.Song
 import com.musicstats.app.data.remote.ArtistImageFetcher
+import com.musicstats.app.util.PaletteExtractor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,7 +30,8 @@ class MusicRepository @Inject constructor(
     private val songDao: SongDao,
     private val artistDao: ArtistDao,
     private val eventDao: ListeningEventDao,
-    private val artistImageFetcher: ArtistImageFetcher
+    private val artistImageFetcher: ArtistImageFetcher,
+    private val paletteExtractor: PaletteExtractor
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     /**
@@ -59,16 +61,21 @@ class MusicRepository @Inject constructor(
         val songId = if (existingSong != null) {
             if (existingSong.albumArtUrl == null && albumArtUrl != null) {
                 songDao.updateAlbumArtUrl(existingSong.id, albumArtUrl)
+                extractAndSavePalette(existingSong.id, albumArtUrl)
             }
             existingSong.id
         } else {
-            songDao.insert(Song(
+            val newId = songDao.insert(Song(
                 title = title,
                 artist = artist,
                 album = album,
                 firstHeardAt = startedAt,
                 albumArtUrl = albumArtUrl
             ))
+            if (albumArtUrl != null) {
+                extractAndSavePalette(newId, albumArtUrl)
+            }
+            newId
         }
 
         // If no album art from media session, try Deezer as fallback
@@ -211,6 +218,43 @@ class MusicRepository @Inject constructor(
                     songDao.updateAlbumArtUrl(song.id, url)
                 }
                 kotlinx.coroutines.delay(500)
+            }
+        }
+    }
+
+    fun getMostRecentEvent(): Flow<ListeningEvent?> = eventDao.getMostRecentEvent()
+
+    private fun extractAndSavePalette(songId: Long, url: String) {
+        scope.launch {
+            val palette = paletteExtractor.extractFromUrl(url) ?: return@launch
+            songDao.updatePaletteColors(
+                songId = songId,
+                dominant = palette.dominant,
+                vibrant = palette.vibrant,
+                muted = palette.muted,
+                darkVibrant = palette.darkVibrant,
+                darkMuted = palette.darkMuted,
+                lightVibrant = palette.lightVibrant
+            )
+        }
+    }
+
+    fun backfillPaletteColors() {
+        scope.launch {
+            val songs = songDao.getSongsNeedingPaletteExtraction()
+            for (song in songs) {
+                val url = song.albumArtUrl ?: continue
+                val palette = paletteExtractor.extractFromUrl(url) ?: continue
+                songDao.updatePaletteColors(
+                    songId = song.id,
+                    dominant = palette.dominant,
+                    vibrant = palette.vibrant,
+                    muted = palette.muted,
+                    darkVibrant = palette.darkVibrant,
+                    darkMuted = palette.darkMuted,
+                    lightVibrant = palette.lightVibrant
+                )
+                kotlinx.coroutines.yield()
             }
         }
     }

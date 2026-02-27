@@ -333,6 +333,9 @@ interface ListeningEventDao {
 
     // --- Misc ---
 
+    @Query("SELECT * FROM listening_events ORDER BY startedAt DESC LIMIT 1")
+    fun getMostRecentEvent(): Flow<ListeningEvent?>
+
     @Query("SELECT COUNT(DISTINCT artist) FROM songs")
     fun getUniqueArtistCount(): Flow<Int>
 
