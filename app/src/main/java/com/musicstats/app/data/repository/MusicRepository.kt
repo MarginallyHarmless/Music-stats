@@ -1,5 +1,6 @@
 package com.musicstats.app.data.repository
 
+import android.util.Log
 import com.musicstats.app.data.dao.ArtistListeningEvent
 import com.musicstats.app.data.dao.ArtistPlayStats
 import com.musicstats.app.data.dao.ArtistStats
@@ -73,6 +74,13 @@ class MusicRepository @Inject constructor(
         // If no album art from media session, try Deezer as fallback
         if (albumArtUrl == null && (existingSong == null || existingSong.albumArtUrl == null)) {
             fetchAlbumArt(songId, title, artist)
+        }
+
+        // Dedup: skip if a recent event for the same song already exists
+        val existing = eventDao.findBySongNearTime(songId, startedAt)
+        if (existing != null) {
+            Log.d("MusicRepository", "Skipping duplicate event for songId=$songId near startedAt=$startedAt")
+            return existing
         }
 
         // Insert listening event

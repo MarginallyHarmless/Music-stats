@@ -84,6 +84,15 @@ interface ListeningEventDao {
     )
     suspend fun findBySongAndTime(songId: Long, startedAt: Long): ListeningEvent?
 
+    @Query(
+        """
+        SELECT * FROM listening_events
+        WHERE songId = :songId AND ABS(startedAt - :startedAt) < :windowMs
+        LIMIT 1
+        """
+    )
+    suspend fun findBySongNearTime(songId: Long, startedAt: Long, windowMs: Long = 5000): ListeningEvent?
+
     // --- Aggregate listening time ---
 
     @Query("SELECT COALESCE(SUM(durationMs), 0) FROM listening_events")

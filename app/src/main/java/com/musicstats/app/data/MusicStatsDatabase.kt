@@ -13,7 +13,7 @@ import com.musicstats.app.data.model.Song
 
 @Database(
     entities = [Song::class, Artist::class, ListeningEvent::class],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class MusicStatsDatabase : RoomDatabase() {
@@ -51,6 +51,30 @@ abstract class MusicStatsDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("UPDATE listening_events SET durationMs = 600000 WHERE durationMs > 600000")
                 db.execSQL("UPDATE listening_events SET completed = 0 WHERE durationMs < 30000 AND completed = 1")
+            }
+        }
+
+        // Remove YouTube video events and deduplicate
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Delete events from regular YouTube (not YouTube Music)
+                db.execSQL("DELETE FROM listening_events WHERE sourceApp = 'com.google.android.youtube'")
+                // Delete orphaned songs (no remaining events)
+                db.execSQL("DELETE FROM songs WHERE id NOT IN (SELECT DISTINCT songId FROM listening_events)")
+                // Delete orphaned artists (no remaining songs)
+                db.execSQL("DELETE FROM artists WHERE name NOT IN (SELECT DISTINCT artist FROM songs)")
+                // Remove duplicate events: keep the one with the longest duration per (songId, rounded startedAt)
+                db.execSQL("""
+                    DELETE FROM listening_events WHERE id NOT IN (
+                        SELECT id FROM (
+                            SELECT id, ROW_NUMBER() OVER (
+                                PARTITION BY songId, startedAt / 10000
+                                ORDER BY durationMs DESC
+                            ) as rn
+                            FROM listening_events
+                        ) WHERE rn = 1
+                    )
+                """)
             }
         }
     }

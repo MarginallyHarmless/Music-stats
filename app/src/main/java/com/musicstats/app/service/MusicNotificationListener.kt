@@ -43,9 +43,25 @@ class MusicNotificationListener : NotificationListenerService() {
 
     private fun onSessionsChanged(controllers: List<MediaController>?) {
         Log.d("MusicNotifListener", "onSessionsChanged: ${controllers?.size} controllers")
+        DebugLog.log(DebugEventType.TRACKING, "Sessions changed: ${controllers?.size} controllers")
+
+        // Clean up sessions that are no longer active
+        val currentTokens = controllers?.map { it.sessionToken }?.toSet() ?: emptySet()
+        val staleTokens = activeCallbacks.keys - currentTokens
+        staleTokens.forEach { token ->
+            Log.d("MusicNotifListener", "  Removing stale session ${activeControllers[token]?.packageName}")
+            DebugLog.log(DebugEventType.TRACKING, "Removing stale session: ${activeControllers[token]?.packageName}")
+            activeControllers[token]?.let { ctrl ->
+                activeCallbacks[token]?.let { cb -> ctrl.unregisterCallback(cb) }
+            }
+            activeCallbacks.remove(token)
+            activeControllers.remove(token)
+        }
+
         controllers?.forEach { controller ->
             if (activeCallbacks.containsKey(controller.sessionToken)) return@forEach
             Log.d("MusicNotifListener", "  Registering callback for ${controller.packageName}")
+            DebugLog.log(DebugEventType.TRACKING, "Registering session: ${controller.packageName}")
 
             val callback = object : MediaController.Callback() {
                 override fun onMetadataChanged(metadata: android.media.MediaMetadata?) {
@@ -100,6 +116,15 @@ class MusicNotificationListener : NotificationListenerService() {
         super.onDestroy()
     }
 
-    override fun onNotificationPosted(sbn: StatusBarNotification?) {}
+    override fun onNotificationPosted(sbn: StatusBarNotification?) {
+        // When a music app posts/updates a notification, re-poll sessions in case
+        // the session was recreated without triggering onActiveSessionsChanged
+        if (sbn?.notification?.extras?.containsKey(android.app.Notification.EXTRA_MEDIA_SESSION) == true) {
+            val manager = getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
+            val componentName = ComponentName(this, MusicNotificationListener::class.java)
+            val controllers = manager.getActiveSessions(componentName)
+            onSessionsChanged(controllers)
+        }
+    }
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {}
 }

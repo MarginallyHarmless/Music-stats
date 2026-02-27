@@ -116,10 +116,15 @@ class MediaSessionTracker @Inject constructor(
         lastPlaybackSpeed = 1.0f
     }
 
+    private val ignoredApps = setOf(
+        "com.google.android.youtube",  // Regular YouTube (videos, not music)
+    )
+
     @Synchronized
     fun onMetadataChanged(metadata: MediaMetadata?, sourceApp: String, scope: CoroutineScope) {
         Log.d(TAG, "onMetadataChanged from $sourceApp, metadata=${metadata != null}")
         if (metadata == null) return
+        if (sourceApp in ignoredApps) return
 
         val title = extractTitle(metadata)
         val artist = extractArtist(metadata)
@@ -172,6 +177,7 @@ class MediaSessionTracker @Inject constructor(
 
     @Synchronized
     fun onPlaybackStateChanged(state: PlaybackState?, sourceApp: String, scope: CoroutineScope) {
+        if (sourceApp in ignoredApps) return
         val wasPlaying = isPlaying
         isPlaying = state?.state == PlaybackState.STATE_PLAYING
 
