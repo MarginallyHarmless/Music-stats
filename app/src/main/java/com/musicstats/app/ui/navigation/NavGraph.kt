@@ -17,6 +17,7 @@ import com.musicstats.app.ui.library.LibraryScreen
 import com.musicstats.app.ui.library.SongDetailScreen
 import com.musicstats.app.ui.onboarding.OnboardingScreen
 import com.musicstats.app.ui.settings.SettingsScreen
+import com.musicstats.app.ui.debug.DebugScreen
 import com.musicstats.app.ui.stats.StatsScreen
 
 @Composable
@@ -32,7 +33,10 @@ fun NavGraph(navController: NavHostController, startDestination: String, modifie
             })
         }
         composable("home") {
-            HomeScreen()
+            HomeScreen(
+                onSongClick = { songId -> navController.navigate("song/$songId") },
+                onArtistClick = { artistName -> navController.navigate("artist/${Uri.encode(artistName)}") }
+            )
         }
         composable("stats") {
             StatsScreen()
@@ -45,6 +49,9 @@ fun NavGraph(navController: NavHostController, startDestination: String, modifie
         }
         composable("settings") {
             SettingsScreen()
+        }
+        composable("debug") {
+            DebugScreen()
         }
         composable(
             "song/{songId}",

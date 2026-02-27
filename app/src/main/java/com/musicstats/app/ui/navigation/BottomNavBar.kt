@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -16,7 +17,8 @@ enum class BottomNavItem(val route: String, val label: String, val icon: ImageVe
     Home("home", "Home", Icons.Default.Home),
     Stats("stats", "Stats", Icons.Default.BarChart),
     Library("library", "Library", Icons.Default.LibraryMusic),
-    Settings("settings", "Settings", Icons.Default.Settings)
+    Settings("settings", "Settings", Icons.Default.Settings),
+    Debug("debug", "Debug", Icons.Default.BugReport)
 }
 
 @Composable
