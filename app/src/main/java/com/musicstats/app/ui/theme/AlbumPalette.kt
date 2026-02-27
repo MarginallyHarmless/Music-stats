@@ -10,7 +10,7 @@ data class AlbumPalette(
     val muted: Color = Color(0xFF4A4070),
     val darkVibrant: Color = Color(0xFF3D2E8C),
     val darkMuted: Color = Color(0xFF2A2050),
-    val lightVibrant: Color = Color(0xFF4DD0C8)
+    val lightVibrant: Color = Color(0xFFA99BF5)
 ) {
     val accent: Color
         get() = if (vibrant != Color(0xFF7C6FF0)) vibrant else dominant

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
@@ -31,7 +30,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -69,84 +67,86 @@ fun ArtistDetailScreen(
 
     AuroraBackground {
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp)
+        modifier = Modifier.fillMaxSize()
     ) {
-        // Share button
+        // Hero header — edge-to-edge artwork
         item {
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                IconButton(onClick = {
-                    val currentStats = stats
-                    val density = context.resources.displayMetrics.density
-                    val w = (360 * density).toInt()
-                    val h = (640 * density).toInt()
-                    ShareCardRenderer.renderComposable(context, w, h, {
-                        MusicStatsTheme {
-                            ArtistSpotlightCard(
-                                name = viewModel.artistName,
-                                imageUrl = imageUrl,
-                                playCount = currentStats?.totalEvents ?: 0,
-                                totalTimeMs = currentStats?.totalDurationMs ?: 0L
+            Box(modifier = Modifier.fillMaxWidth()) {
+                if (imageUrl != null) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = "Artist image",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(360.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(360.dp)
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        Color(0xFF0A0A0F)
+                                    ),
+                                    startY = 180f
+                                )
                             )
-                        }
-                    }) { bitmap ->
-                        ShareCardRenderer.shareBitmap(context, bitmap)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Artist image",
+                            modifier = Modifier.size(120.dp),
+                            tint = Color.White.copy(alpha = 0.4f)
+                        )
                     }
-                }) {
+                }
+                // Share button
+                IconButton(
+                    onClick = {
+                        val currentStats = stats
+                        val density = context.resources.displayMetrics.density
+                        val w = (360 * density).toInt()
+                        val h = (640 * density).toInt()
+                        ShareCardRenderer.renderComposable(context, w, h, {
+                            MusicStatsTheme {
+                                ArtistSpotlightCard(
+                                    name = viewModel.artistName,
+                                    imageUrl = imageUrl,
+                                    playCount = currentStats?.totalEvents ?: 0,
+                                    totalTimeMs = currentStats?.totalDurationMs ?: 0L
+                                )
+                            }
+                        }) { bitmap ->
+                            ShareCardRenderer.shareBitmap(context, bitmap)
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                ) {
                     Icon(
                         Icons.Default.Share,
                         contentDescription = "Share",
                         tint = Color.White.copy(alpha = 0.7f)
                     )
                 }
-            }
-        }
-
-        // Hero header
-        item {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                if (imageUrl != null) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Box(
-                            modifier = Modifier
-                                .size(230.dp)
-                                .background(
-                                    Brush.radialGradient(
-                                        colors = listOf(
-                                            LocalAlbumPalette.current.accent.copy(alpha = 0.15f),
-                                            Color.Transparent
-                                        )
-                                    ),
-                                    shape = CircleShape
-                                )
-                        )
-                        AsyncImage(
-                            model = imageUrl,
-                            contentDescription = "Artist image",
-                            modifier = Modifier
-                                .size(200.dp)
-                                .shadow(8.dp, CircleShape)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Artist image",
-                        modifier = Modifier.size(200.dp),
-                        tint = Color.White.copy(alpha = 0.4f)
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
+                // Title overlay at bottom of image
                 Text(
                     text = viewModel.artistName,
-                    style = MaterialTheme.typography.headlineMedium
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
                 )
             }
             Spacer(modifier = Modifier.height(20.dp))
@@ -154,7 +154,10 @@ fun ArtistDetailScreen(
 
         // Stats row
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.padding(horizontal = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -191,8 +194,10 @@ fun ArtistDetailScreen(
 
         // History header
         item {
-            SectionHeader("Listening History")
-            Spacer(modifier = Modifier.height(12.dp))
+            Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                SectionHeader("Listening History")
+                Spacer(modifier = Modifier.height(12.dp))
+            }
         }
 
         if (history.isEmpty()) {
@@ -200,7 +205,8 @@ fun ArtistDetailScreen(
                 Text(
                     text = "No listening events yet",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.5f)
+                    color = Color.White.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(horizontal = 24.dp)
                 )
             }
         } else {
@@ -209,7 +215,7 @@ fun ArtistDetailScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 10.dp),
+                        .padding(horizontal = 24.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Mini thumbnail fallback

@@ -46,7 +46,7 @@ fun StatCard(
                 Icon(
                     imageVector = icon,
                     contentDescription = label,
-                    tint = palette.lightVibrant
+                    tint = palette.accent
                 )
             }
             Text(
