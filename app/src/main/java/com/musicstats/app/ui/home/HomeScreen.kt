@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -179,88 +178,90 @@ fun HomeScreen(
             }
         }
 
-        // 3. Hero gradient card
-        GradientCard {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = formatDuration(displayMs, showSeconds = true),
-                    style = MaterialTheme.typography.displayMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Box(
-                    modifier = Modifier
-                        .padding(vertical = 8.dp)
-                        .fillMaxWidth(0.3f)
-                        .height(1.dp)
-                        .background(LocalAlbumPalette.current.accent.copy(alpha = 0.4f))
-                )
-                Text(
-                    text = "LISTENED TODAY",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        letterSpacing = 1.sp
-                    ),
-                    color = Color.White.copy(alpha = 0.7f)
-                )
-                // vs yesterday comparison
-                if (displayMs > 0 || yesterdayMs > 0) {
-                    Spacer(Modifier.height(6.dp))
-                    val vsText = when {
-                        yesterdayMs == 0L && displayMs > 0 -> "First session today!"
-                        displayMs == 0L -> ""
-                        else -> {
-                            val pct = ((displayMs - yesterdayMs) * 100 / yesterdayMs).toInt()
-                            when {
-                                pct > 0 -> "\u2191 $pct% vs yesterday"
-                                pct < 0 -> "\u2193 ${-pct}% vs yesterday"
-                                else -> "Same as yesterday"
+        // 3. Hero gradient card + stat pills (grouped with 8dp spacing)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            GradientCard {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = formatDuration(displayMs, showSeconds = true),
+                        style = MaterialTheme.typography.displayMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Box(
+                        modifier = Modifier
+                            .padding(vertical = 8.dp)
+                            .fillMaxWidth(0.3f)
+                            .height(1.dp)
+                            .background(LocalAlbumPalette.current.accent.copy(alpha = 0.4f))
+                    )
+                    Text(
+                        text = "LISTENED TODAY",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            letterSpacing = 1.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    // vs yesterday comparison
+                    if (displayMs > 0 || yesterdayMs > 0) {
+                        Spacer(Modifier.height(6.dp))
+                        val vsText = when {
+                            yesterdayMs == 0L && displayMs > 0 -> "First session today!"
+                            displayMs == 0L -> ""
+                            else -> {
+                                val pct = ((displayMs - yesterdayMs) * 100 / yesterdayMs).toInt()
+                                when {
+                                    pct > 0 -> "\u2191 $pct% vs yesterday"
+                                    pct < 0 -> "\u2193 ${-pct}% vs yesterday"
+                                    else -> "Same as yesterday"
+                                }
                             }
                         }
-                    }
-                    if (vsText.isNotEmpty()) {
-                        val vsColor = when {
-                            yesterdayMs == 0L -> Color(0xFF4DD0C8)
-                            displayMs >= yesterdayMs -> Color(0xFF4DD0C8)
-                            else -> Color.White.copy(alpha = 0.5f)
+                        if (vsText.isNotEmpty()) {
+                            val vsColor = when {
+                                yesterdayMs == 0L -> Color(0xFF4DD0C8)
+                                displayMs >= yesterdayMs -> Color(0xFF4DD0C8)
+                                else -> Color.White.copy(alpha = 0.5f)
+                            }
+                            Text(
+                                text = vsText,
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    letterSpacing = 0.5.sp
+                                ),
+                                color = vsColor
+                            )
                         }
-                        Text(
-                            text = vsText,
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                letterSpacing = 0.5.sp
-                            ),
-                            color = vsColor
-                        )
                     }
                 }
             }
-        }
 
-        // 4. Today's stat pills row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            StatCard(
-                label = "Songs Today",
-                value = songsToday.toString(),
-                icon = Icons.AutoMirrored.Filled.QueueMusic,
-                modifier = Modifier.weight(1f)
-            )
-            StatCard(
-                label = "Skips Today",
-                value = skipsToday.toString(),
-                icon = Icons.Default.SkipNext,
-                modifier = Modifier.weight(1f)
-            )
-            StatCard(
-                label = "Streak",
-                value = if (streak > 0) "${streak}d" else "\u2014",
-                icon = Icons.Default.LocalFireDepartment,
-                modifier = Modifier.weight(1f)
-            )
+            // 4. Today's stat pills row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StatCard(
+                    label = "Songs Today",
+                    value = songsToday.toString(),
+                    icon = Icons.AutoMirrored.Filled.QueueMusic,
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    label = "Skips Today",
+                    value = skipsToday.toString(),
+                    icon = Icons.Default.SkipNext,
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    label = "Streak",
+                    value = if (streak > 0) "${streak}d" else "\u2014",
+                    icon = Icons.Default.LocalFireDepartment,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
 
         // 5. Top artist spotlight
@@ -404,13 +405,16 @@ fun HomeScreen(
                 color = Color.White.copy(alpha = 0.5f)
             )
         } else {
-            topSongs.forEachIndexed { index, song ->
-                Column(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                topSongs.forEachIndexed { index, song ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onSongClick(song.songId) }
-                            .padding(vertical = 12.dp),
+                            .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
@@ -465,11 +469,6 @@ fun HomeScreen(
                                 textAlign = TextAlign.End
                             )
                         }
-                    }
-                    if (index < topSongs.lastIndex) {
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                        )
                     }
                 }
             }
