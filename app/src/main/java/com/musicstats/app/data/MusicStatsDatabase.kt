@@ -13,7 +13,7 @@ import com.musicstats.app.data.model.Song
 
 @Database(
     entities = [Song::class, Artist::class, ListeningEvent::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class MusicStatsDatabase : RoomDatabase() {
@@ -43,6 +43,14 @@ abstract class MusicStatsDatabase : RoomDatabase() {
                 if (!hasColumn) {
                     db.execSQL("ALTER TABLE songs ADD COLUMN albumArtUrl TEXT DEFAULT NULL")
                 }
+            }
+        }
+
+        // Cap inflated durations from missed track transitions
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("UPDATE listening_events SET durationMs = 600000 WHERE durationMs > 600000")
+                db.execSQL("UPDATE listening_events SET completed = 0 WHERE durationMs < 30000 AND completed = 1")
             }
         }
     }

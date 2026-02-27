@@ -103,7 +103,7 @@ interface ListeningEventDao {
         """
         SELECT le.songId, s.title, s.artist, s.albumArtUrl,
                COALESCE(SUM(le.durationMs), 0) AS totalDurationMs,
-               COUNT(le.id) AS playCount
+               COUNT(CASE WHEN le.completed = 1 THEN 1 END) AS playCount
         FROM listening_events le
         INNER JOIN songs s ON s.id = le.songId
         WHERE le.startedAt >= :since
@@ -118,7 +118,7 @@ interface ListeningEventDao {
         """
         SELECT le.songId, s.title, s.artist, s.albumArtUrl,
                COALESCE(SUM(le.durationMs), 0) AS totalDurationMs,
-               COUNT(le.id) AS playCount
+               COUNT(CASE WHEN le.completed = 1 THEN 1 END) AS playCount
         FROM listening_events le
         INNER JOIN songs s ON s.id = le.songId
         WHERE le.startedAt >= :since
@@ -135,7 +135,7 @@ interface ListeningEventDao {
         """
         SELECT s.artist,
                COALESCE(SUM(le.durationMs), 0) AS totalDurationMs,
-               COUNT(le.id) AS playCount
+               COUNT(CASE WHEN le.completed = 1 THEN 1 END) AS playCount
         FROM listening_events le
         INNER JOIN songs s ON s.id = le.songId
         WHERE le.startedAt >= :since
@@ -259,7 +259,7 @@ interface ListeningEventDao {
         """
         SELECT le.songId, s.title, s.artist, s.albumArtUrl,
                COALESCE(SUM(le.durationMs), 0) AS totalDurationMs,
-               COUNT(le.id) AS playCount
+               COUNT(CASE WHEN le.completed = 1 THEN 1 END) AS playCount
         FROM listening_events le
         INNER JOIN songs s ON s.id = le.songId
         WHERE le.songId = :songId
@@ -275,7 +275,7 @@ interface ListeningEventDao {
         """
         SELECT s.id AS songId, s.title, s.artist, s.album, s.albumArtUrl,
                COALESCE(SUM(le.durationMs), 0) AS totalDurationMs,
-               COUNT(le.id) AS playCount,
+               COUNT(CASE WHEN le.completed = 1 THEN 1 END) AS playCount,
                s.firstHeardAt
         FROM songs s
         LEFT JOIN listening_events le ON le.songId = s.id
@@ -293,7 +293,7 @@ interface ListeningEventDao {
     @Query("""
         SELECT a.name, a.imageUrl, a.firstHeardAt,
                COALESCE(SUM(le.durationMs), 0) AS totalDurationMs,
-               COUNT(le.id) AS playCount
+               COUNT(CASE WHEN le.completed = 1 THEN 1 END) AS playCount
         FROM artists a
         LEFT JOIN songs s ON s.artist = a.name
         LEFT JOIN listening_events le ON le.songId = s.id
@@ -331,7 +331,7 @@ interface ListeningEventDao {
         """
         SELECT le.songId, s.title, s.artist, s.albumArtUrl,
                COALESCE(SUM(le.durationMs), 0) AS totalDurationMs,
-               COUNT(le.id) AS playCount
+               COUNT(CASE WHEN le.completed = 1 THEN 1 END) AS playCount
         FROM listening_events le
         INNER JOIN songs s ON s.id = le.songId
         GROUP BY le.songId

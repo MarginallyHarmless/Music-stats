@@ -22,9 +22,9 @@ import javax.inject.Inject
 
 enum class TimeRange(val label: String) {
     Today("Today"),
-    ThisWeek("This Week"),
-    ThisMonth("This Month"),
-    AllTime("All Time");
+    ThisWeek("Week"),
+    ThisMonth("Month"),
+    AllTime("All");
 
     fun toEpochMillis(): Long = when (this) {
         Today -> startOfToday()

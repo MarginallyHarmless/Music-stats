@@ -66,7 +66,11 @@ import com.musicstats.app.ui.theme.MusicStatsTheme
 import com.musicstats.app.util.formatDuration
 
 @Composable
-fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
+fun HomeScreen(
+    onSongClick: (Long) -> Unit = {},
+    onArtistClick: (String) -> Unit = {},
+    viewModel: HomeViewModel = hiltViewModel()
+) {
     val todayMs by viewModel.todayListeningTimeMs.collectAsState()
     val songsToday by viewModel.songsToday.collectAsState()
     val skipsToday by viewModel.skipsToday.collectAsState()
@@ -202,6 +206,7 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
         // 5. Top artist spotlight
         if (topArtistInfo != null) {
             ElevatedCard(
+                onClick = { topArtistInfo?.name?.let { onArtistClick(it) } },
                 shape = MaterialTheme.shapes.large,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -264,7 +269,7 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    text = "${topArtistInfo?.playCount} plays",
+                                    text = formatDuration(topArtistInfo?.totalDurationMs ?: 0L),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color.White
                                 )
@@ -278,7 +283,7 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    text = formatDuration(topArtistInfo?.totalDurationMs ?: 0L),
+                                    text = "${topArtistInfo?.playCount} plays",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color.White
                                 )
@@ -328,6 +333,7 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
         } else {
             topSongs.forEachIndexed { index, song ->
                 ElevatedCard(
+                    onClick = { onSongClick(song.songId) },
                     shape = MaterialTheme.shapes.medium,
                     colors = CardDefaults.elevatedCardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
@@ -378,12 +384,20 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel()) {
                                 maxLines = 1
                             )
                         }
-                        Text(
-                            text = "${song.playCount} plays",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.End
-                        )
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = formatDuration(song.totalDurationMs),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.End
+                            )
+                            Text(
+                                text = "${song.playCount} plays",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                textAlign = TextAlign.End
+                            )
+                        }
                     }
                 }
             }
