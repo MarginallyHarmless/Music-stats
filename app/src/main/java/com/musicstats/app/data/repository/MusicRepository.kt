@@ -108,6 +108,8 @@ class MusicRepository @Inject constructor(
 
     fun getListeningTimeSince(since: Long): Flow<Long> = eventDao.getListeningTimeSince(since)
 
+    fun getListeningTimeBetween(from: Long, until: Long): Flow<Long> = eventDao.getListeningTimeBetween(from, until)
+
     fun getTotalPlayCount(since: Long): Flow<Int> = eventDao.getTotalPlayCount(since)
 
     fun getSongCountSince(since: Long): Flow<Int> = eventDao.getSongCountSince(since)

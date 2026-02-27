@@ -106,6 +106,14 @@ interface ListeningEventDao {
     )
     fun getListeningTimeSince(since: Long): Flow<Long>
 
+    @Query(
+        """
+        SELECT COALESCE(SUM(durationMs), 0) FROM listening_events
+        WHERE startedAt >= :from AND startedAt < :until
+        """
+    )
+    fun getListeningTimeBetween(from: Long, until: Long): Flow<Long>
+
     // --- Top songs ---
 
     @Query(

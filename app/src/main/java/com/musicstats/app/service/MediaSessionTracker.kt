@@ -8,14 +8,19 @@ import android.os.SystemClock
 import com.musicstats.app.data.repository.MusicRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import android.util.Log
 import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
+import javax.inject.Singleton
 
 private const val TAG = "MediaSessionTracker"
 
+@Singleton
 class MediaSessionTracker @Inject constructor(
     private val repository: MusicRepository,
     @ApplicationContext private val context: Context
@@ -28,6 +33,12 @@ class MediaSessionTracker @Inject constructor(
     private var currentSourceApp: String? = null
     private var playStartTime: Long? = null       // wall-clock epoch ms, used for startedAt
     private var isPlaying: Boolean = false
+
+    // Exposed state for UI live ticker
+    private val _isPlayingFlow = MutableStateFlow(false)
+    val isPlayingFlow: StateFlow<Boolean> = _isPlayingFlow.asStateFlow()
+    private val _currentSessionStartMs = MutableStateFlow(0L)
+    val currentSessionStartMs: StateFlow<Long> = _currentSessionStartMs.asStateFlow()
     private var currentMediaDurationMs: Long? = null
 
     // Position-based tracking
@@ -104,6 +115,8 @@ class MediaSessionTracker @Inject constructor(
         playStartTime = System.currentTimeMillis()
         updatePositionFromState(state)
         playStartPositionMs = lastKnownPositionMs ?: 0L
+        _isPlayingFlow.value = true
+        _currentSessionStartMs.value = playStartTime!!
         Log.d(TAG, "  Started tracking: startTime=$playStartTime, startPosition=$playStartPositionMs")
         DebugLog.log(DebugEventType.TRACKING, "Started | startPos=$playStartPositionMs | lastKnown=$lastKnownPositionMs")
     }
@@ -114,6 +127,8 @@ class MediaSessionTracker @Inject constructor(
         lastKnownPositionMs = null
         lastPositionUpdateRealtime = null
         lastPlaybackSpeed = 1.0f
+        _isPlayingFlow.value = false
+        _currentSessionStartMs.value = 0L
     }
 
     private val ignoredApps = setOf(

@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.musicstats.app.data.dao.DailyListening
 import com.musicstats.app.data.dao.SongPlayStats
 import com.musicstats.app.data.repository.MusicRepository
+import com.musicstats.app.service.MediaSessionTracker
 import com.musicstats.app.util.daysAgo
 import com.musicstats.app.util.startOfToday
 import com.musicstats.app.util.startOfWeek
+import com.musicstats.app.util.startOfYesterday
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +23,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val repository: MusicRepository
+    private val repository: MusicRepository,
+    val mediaSessionTracker: MediaSessionTracker
 ) : ViewModel() {
 
     val greeting: String
@@ -48,6 +51,10 @@ class HomeViewModel @Inject constructor(
 
     val todayListeningTimeMs: StateFlow<Long> =
         repository.getListeningTimeSince(startOfToday())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+
+    val yesterdayListeningTimeMs: StateFlow<Long> =
+        repository.getListeningTimeBetween(startOfYesterday(), startOfToday())
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
     val songsToday: StateFlow<Int> =

@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -76,12 +77,29 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val todayMs by viewModel.todayListeningTimeMs.collectAsState()
+    val yesterdayMs by viewModel.yesterdayListeningTimeMs.collectAsState()
+    val isPlaying by viewModel.mediaSessionTracker.isPlayingFlow.collectAsState()
+    val sessionStartMs by viewModel.mediaSessionTracker.currentSessionStartMs.collectAsState()
     val songsToday by viewModel.songsToday.collectAsState()
     val skipsToday by viewModel.skipsToday.collectAsState()
     val topArtistInfo by viewModel.topArtistToday.collectAsState()
     val weeklyData by viewModel.weeklyDailyListening.collectAsState()
     val topSongs by viewModel.topSongsThisWeek.collectAsState()
     val streak by viewModel.currentStreak.collectAsState()
+
+    // Live ticker: adds current session elapsed time to DB total
+    var liveElapsed by remember { mutableLongStateOf(0L) }
+    androidx.compose.runtime.LaunchedEffect(isPlaying, sessionStartMs) {
+        if (isPlaying && sessionStartMs > 0) {
+            while (true) {
+                liveElapsed = System.currentTimeMillis() - sessionStartMs
+                kotlinx.coroutines.delay(1000)
+            }
+        } else {
+            liveElapsed = 0L
+        }
+    }
+    val displayMs = todayMs + liveElapsed
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -168,7 +186,7 @@ fun HomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = formatDuration(todayMs),
+                    text = formatDuration(displayMs, showSeconds = true),
                     style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -187,6 +205,36 @@ fun HomeScreen(
                     ),
                     color = Color.White.copy(alpha = 0.7f)
                 )
+                // vs yesterday comparison
+                if (displayMs > 0 || yesterdayMs > 0) {
+                    Spacer(Modifier.height(6.dp))
+                    val vsText = when {
+                        yesterdayMs == 0L && displayMs > 0 -> "First session today!"
+                        displayMs == 0L -> ""
+                        else -> {
+                            val pct = ((displayMs - yesterdayMs) * 100 / yesterdayMs).toInt()
+                            when {
+                                pct > 0 -> "\u2191 $pct% vs yesterday"
+                                pct < 0 -> "\u2193 ${-pct}% vs yesterday"
+                                else -> "Same as yesterday"
+                            }
+                        }
+                    }
+                    if (vsText.isNotEmpty()) {
+                        val vsColor = when {
+                            yesterdayMs == 0L -> Color(0xFF4DD0C8)
+                            displayMs >= yesterdayMs -> Color(0xFF4DD0C8)
+                            else -> Color.White.copy(alpha = 0.5f)
+                        }
+                        Text(
+                            text = vsText,
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                letterSpacing = 0.5.sp
+                            ),
+                            color = vsColor
+                        )
+                    }
+                }
             }
         }
 
@@ -448,7 +496,7 @@ fun HomeScreen(
                     ShareCardRenderer.renderComposable(context, w, h, {
                         MusicStatsTheme {
                             DailyRecapCard(
-                                listeningTimeMs = todayMs,
+                                listeningTimeMs = displayMs,
                                 topArtistName = topArtistInfo?.name,
                                 topArtistImageUrl = topArtistInfo?.imageUrl,
                                 topSongs = topSongs.take(3).map { it.title to it.artist }
