@@ -5,8 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.musicstats.app.data.dao.DailyListening
 import com.musicstats.app.data.dao.SongPlayStats
+import com.musicstats.app.data.model.Moment
+import com.musicstats.app.data.repository.MomentsRepository
 import com.musicstats.app.data.repository.MusicRepository
 import com.musicstats.app.service.MediaSessionTracker
+import com.musicstats.app.service.MomentDetector
 import com.musicstats.app.service.MomentWorker
 import com.musicstats.app.util.daysAgo
 import com.musicstats.app.util.startOfToday
@@ -14,6 +17,7 @@ import com.musicstats.app.util.startOfWeek
 import com.musicstats.app.util.startOfYesterday
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -22,13 +26,16 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val repository: MusicRepository,
     val mediaSessionTracker: MediaSessionTracker,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val momentDetector: MomentDetector,
+    private val momentsRepository: MomentsRepository
 ) : ViewModel() {
 
     val greeting: String
@@ -94,6 +101,32 @@ class HomeViewModel @Inject constructor(
         repository.getDailyListening(daysAgo(365))
             .map { dailyData -> computeStreak(dailyData) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val recentMoments: StateFlow<List<Moment>> =
+        momentsRepository.getRecentMoments(10)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val unseenMomentsCount: StateFlow<Int> =
+        momentsRepository.getUnseenCount()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    fun detectMomentsOnOpen() {
+        viewModelScope.launch(Dispatchers.IO) {
+            momentDetector.detectAndPersistNewMoments()
+        }
+    }
+
+    fun markMomentSeen(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            momentsRepository.markSeen(id)
+        }
+    }
+
+    fun markMomentShared(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            momentsRepository.markShared(id)
+        }
+    }
 
     private fun computeStreak(dailyData: List<DailyListening>): Int {
         if (dailyData.isEmpty()) return 0

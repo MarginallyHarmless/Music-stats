@@ -85,6 +85,7 @@ fun HomeScreen(
     val weeklyData by viewModel.weeklyDailyListening.collectAsState()
     val topSongs by viewModel.topSongsThisWeek.collectAsState()
     val streak by viewModel.currentStreak.collectAsState()
+    val recentMoments by viewModel.recentMoments.collectAsState()
 
     // Live ticker: adds current session elapsed time to DB total
     var liveElapsed by remember { mutableLongStateOf(0L) }
@@ -109,6 +110,10 @@ fun HomeScreen(
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             listenerEnabled = isNotificationListenerEnabled(context)
         }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        viewModel.detectMomentsOnOpen()
     }
 
     AuroraBackground {
