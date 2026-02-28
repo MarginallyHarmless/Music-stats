@@ -33,4 +33,9 @@ interface ArtistDao {
 
     @Query("SELECT * FROM artists WHERE imageUrl IS NULL")
     suspend fun getArtistsWithoutImage(): List<Artist>
+
+    // --- Suspend queries for MomentDetector ---
+
+    @Query("SELECT * FROM artists WHERE firstHeardAt >= :since ORDER BY firstHeardAt DESC")
+    suspend fun getArtistsSince(since: Long): List<Artist>
 }

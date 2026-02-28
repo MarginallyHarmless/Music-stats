@@ -360,4 +360,109 @@ interface ListeningEventDao {
         """
     )
     fun getDeepCuts(threshold: Int = 50): Flow<List<SongPlayStats>>
+
+    // --- Suspend queries for MomentDetector ---
+
+    @Query("SELECT COALESCE(SUM(durationMs), 0) FROM listening_events WHERE completed = 1")
+    suspend fun getTotalListeningTimeMsSuspend(): Long
+
+    @Query("SELECT COUNT(*) FROM listening_events WHERE completed = 1")
+    suspend fun getTotalPlayCountSuspend(): Long
+
+    @Query("SELECT COUNT(*) FROM listening_events WHERE completed = 0")
+    suspend fun getTotalSkipCountSuspend(): Long
+
+    @Query("SELECT COUNT(DISTINCT songId) FROM listening_events")
+    suspend fun getUniqueSongCountSuspend(): Int
+
+    @Query("SELECT COUNT(DISTINCT s.artist) FROM listening_events e JOIN songs s ON e.songId = s.id")
+    suspend fun getUniqueArtistCountSuspend(): Int
+
+    @Query("""
+        SELECT COUNT(DISTINCT s.artist) FROM listening_events e
+        JOIN songs s ON e.songId = s.id
+        WHERE e.startedAt >= :since
+        AND s.firstHeardAt >= :since
+    """)
+    suspend fun getNewArtistsSinceSuspend(since: Long): Int
+
+    @Query("""
+        SELECT e.songId, s.title, s.artist, s.albumArtUrl,
+               SUM(e.durationMs) as totalDurationMs,
+               COUNT(*) as playCount
+        FROM listening_events e JOIN songs s ON e.songId = s.id
+        WHERE e.completed = 1
+        GROUP BY e.songId
+        ORDER BY playCount DESC
+        LIMIT :limit
+    """)
+    suspend fun getTopSongsByPlayCountSuspend(limit: Int): List<SongPlayStats>
+
+    @Query("""
+        SELECT e.songId, s.title, s.artist, s.album, s.albumArtUrl, s.firstHeardAt,
+               SUM(e.durationMs) as totalDurationMs,
+               COUNT(*) as playCount
+        FROM listening_events e JOIN songs s ON e.songId = s.id
+        WHERE e.completed = 1
+        GROUP BY e.songId
+        HAVING playCount >= :minPlays
+    """)
+    suspend fun getSongsWithMinPlays(minPlays: Int): List<SongWithStats>
+
+    @Query("""
+        SELECT s.artist, SUM(e.durationMs) as totalDurationMs, COUNT(*) as playCount
+        FROM listening_events e JOIN songs s ON e.songId = s.id
+        WHERE e.startedAt >= :since
+        GROUP BY s.artist
+        ORDER BY totalDurationMs DESC
+        LIMIT :limit
+    """)
+    suspend fun getTopArtistsByDurationSuspend(since: Long, limit: Int): List<ArtistPlayStats>
+
+    @Query("""
+        SELECT s.artist, SUM(e.durationMs) as totalDurationMs, COUNT(*) as playCount
+        FROM listening_events e JOIN songs s ON e.songId = s.id
+        GROUP BY s.artist
+        ORDER BY totalDurationMs DESC
+    """)
+    suspend fun getAllArtistsWithDurationSuspend(): List<ArtistPlayStats>
+
+    @Query("""
+        SELECT CAST(strftime('%H', startedAt / 1000, 'unixepoch') AS INTEGER) as hour,
+               SUM(durationMs) as totalDurationMs,
+               COUNT(*) as eventCount
+        FROM listening_events
+        WHERE startedAt >= :since AND completed = 1
+        GROUP BY hour
+    """)
+    suspend fun getHourlyListeningSuspend(since: Long): List<HourlyListening>
+
+    @Query("SELECT COALESCE(MAX(durationMs), 0) FROM listening_events WHERE completed = 1")
+    suspend fun getLongestSessionMs(): Long
+
+    @Query("""
+        SELECT COUNT(*) FROM listening_events e
+        JOIN songs s ON e.songId = s.id
+        WHERE s.artist = :artist AND e.completed = 0 AND e.startedAt >= :since
+    """)
+    suspend fun getArtistSkipCountSince(artist: String, since: Long): Int
+
+    @Query("""
+        SELECT e.songId, s.title, s.artist, s.albumArtUrl,
+               SUM(e.durationMs) as totalDurationMs,
+               COUNT(*) as playCount
+        FROM listening_events e JOIN songs s ON e.songId = s.id
+        WHERE e.startedAt >= :dayStart AND e.startedAt < :dayEnd AND e.completed = 1
+        GROUP BY e.songId
+        ORDER BY playCount DESC
+    """)
+    suspend fun getSongsPlayedOnDay(dayStart: Long, dayEnd: Long): List<SongPlayStats>
+
+    @Query("""
+        SELECT DISTINCT date(startedAt / 1000, 'unixepoch') as day
+        FROM listening_events
+        WHERE songId = :songId AND completed = 1 AND startedAt >= :since
+        ORDER BY day DESC
+    """)
+    suspend fun getDistinctDaysForSong(songId: Long, since: Long): List<String>
 }
