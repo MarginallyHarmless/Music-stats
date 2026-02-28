@@ -428,7 +428,7 @@ interface ListeningEventDao {
     suspend fun getAllArtistsWithDurationSuspend(): List<ArtistPlayStats>
 
     @Query("""
-        SELECT CAST(strftime('%H', startedAt / 1000, 'unixepoch') AS INTEGER) as hour,
+        SELECT CAST(strftime('%H', startedAt / 1000, 'unixepoch', 'localtime') AS INTEGER) as hour,
                SUM(durationMs) as totalDurationMs,
                COUNT(*) as eventCount
         FROM listening_events
