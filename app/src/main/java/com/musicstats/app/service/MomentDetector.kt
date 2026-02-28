@@ -292,6 +292,101 @@ class MomentDetector @Inject constructor(
             ))?.let { result += it }
         }
 
+        // Weekend Warrior
+        val fourWeeksAgo = now - 28L * 24 * 3600 * 1000
+        val weekendMs = eventDao.getWeekendListeningMsSuspend(fourWeeksAgo)
+        val totalFourWeekMs = eventDao.getListeningTimeSinceSuspend(fourWeeksAgo).coerceAtLeast(1L)
+        if (weekendMs.toDouble() / totalFourWeekMs > 0.6) {
+            val weekendPct = (weekendMs * 100 / totalFourWeekMs).toInt()
+            val weekendHoursPerWeek = weekendMs / 4 / 3_600_000L
+            persistIfNew(Moment(
+                type = "ARCHETYPE_WEEKEND_WARRIOR", entityKey = yearMonth, triggeredAt = now,
+                title = "Weekend Warrior",
+                description = "Most of your listening happens on weekends",
+                statLines = listOf("$weekendPct% on weekends", "${weekendHoursPerWeek}h on weekends/week")
+            ))?.let { result += it }
+        }
+
+        // Wide Taste
+        val uniqueArtistsThisMonth = eventDao.getUniqueArtistCountSinceSuspend(since)
+        val topArtistThisMonth = eventDao.getTopArtistsByDurationSuspend(since, 1)
+        val totalThisMonthMs = eventDao.getListeningTimeSinceSuspend(since).coerceAtLeast(1L)
+        if (topArtistThisMonth.isNotEmpty() && uniqueArtistsThisMonth >= 15) {
+            val topArtistPct = (topArtistThisMonth[0].totalDurationMs * 100 / totalThisMonthMs).toInt()
+            if (topArtistPct < 15) {
+                persistIfNew(Moment(
+                    type = "ARCHETYPE_WIDE_TASTE", entityKey = yearMonth, triggeredAt = now,
+                    title = "Wide Taste",
+                    description = "No single artist dominates your listening",
+                    statLines = listOf("$uniqueArtistsThisMonth artists this month", "top artist: $topArtistPct%")
+                ))?.let { result += it }
+            }
+        }
+
+        // Repeat Offender
+        val totalPlaysThisMonth = eventDao.getTotalPlayCountInPeriodSuspend(since).coerceAtLeast(1L)
+        val top3ThisMonth = eventDao.getTopSongsInPeriodByPlayCountSuspend(since, 3)
+        if (top3ThisMonth.isNotEmpty()) {
+            val top3Plays = top3ThisMonth.sumOf { it.playCount }
+            val top3Pct = (top3Plays * 100 / totalPlaysThisMonth).toInt()
+            if (top3Pct > 40) {
+                val topSong = top3ThisMonth[0]
+                persistIfNew(Moment(
+                    type = "ARCHETYPE_REPEAT_OFFENDER", entityKey = yearMonth, triggeredAt = now,
+                    title = "Repeat Offender",
+                    description = "You found your songs. You're not letting go.",
+                    songId = topSong.songId,
+                    statLines = listOf("top 3 songs: $top3Pct% of plays", "${topSong.title} × ${topSong.playCount}"),
+                    imageUrl = topSong.albumArtUrl
+                ))?.let { result += it }
+            }
+        }
+
+        // Album Listener — detect consecutive same-artist runs ≥ 5 in sessions
+        val orderedEvents = eventDao.getOrderedSongArtistEventsSuspend(since)
+        val sessionGapMs = 30 * 60 * 1000L // 30-minute gap = new session
+        data class AlbumRun(val artist: String, val length: Int)
+        val albumRuns = mutableListOf<AlbumRun>()
+        var currentArtist: String? = null
+        var currentRunLength = 0
+        var lastEndMs = 0L
+
+        for (event in orderedEvents) {
+            val isNewSession = event.startedAt - lastEndMs > sessionGapMs
+            if (isNewSession || event.artist != currentArtist) {
+                if (currentRunLength >= 5 && currentArtist != null) {
+                    albumRuns += AlbumRun(currentArtist!!, currentRunLength)
+                }
+                currentArtist = event.artist
+                currentRunLength = 1
+            } else {
+                currentRunLength++
+            }
+            lastEndMs = event.startedAt + event.durationMs
+        }
+        // Check last run
+        if (currentRunLength >= 5 && currentArtist != null) {
+            albumRuns += AlbumRun(currentArtist!!, currentRunLength)
+        }
+
+        if (albumRuns.size >= 3) {
+            val avgRun = albumRuns.map { it.length }.average().toInt()
+            val topRunArtist = albumRuns.groupBy { it.artist }
+                .maxByOrNull { it.value.size }?.key
+            val topSong = if (topRunArtist != null)
+                eventDao.getTopSongsInPeriodByPlayCountSuspend(since, 100)
+                    .firstOrNull { it.artist == topRunArtist }
+            else null
+            persistIfNew(Moment(
+                type = "ARCHETYPE_ALBUM_LISTENER", entityKey = yearMonth, triggeredAt = now,
+                title = "Album Listener",
+                description = "You don't shuffle. You commit.",
+                songId = topSong?.songId,
+                statLines = listOf("${albumRuns.size} album runs this month", "avg $avgRun songs per run"),
+                imageUrl = topSong?.albumArtUrl
+            ))?.let { result += it }
+        }
+
         return result
     }
 
