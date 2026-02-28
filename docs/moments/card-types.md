@@ -8,7 +8,7 @@
 - Share card: `app/src/main/java/com/musicstats/app/ui/components/MomentShareCard.kt`
 
 Total types: **48** across **7 categories**
-_(Archetypes: 12 types. Behavioral: 13 types. Counts reflect all defined moment types.)_
+_(Song Play: 6 · Artist Hours: 4 · Streaks: 5 · Total Hours: 4 · Discovery: 4 · Archetypes: 12 · Behavioral: 13 = 48)_
 
 ---
 
@@ -17,8 +17,8 @@ _(Archetypes: 12 types. Behavioral: 13 types. Counts reflect all defined moment 
 Triggered when a song's all-time play count crosses a threshold.
 Thresholds: `10 / 25 / 50 / 100 / 250 / 500`
 
-| Type | Trigger | Title | Description | StatLine | Visual |
-|------|---------|-------|-------------|----------|--------|
+| Type | Trigger | Title | Description | StatLines | Visual |
+|------|---------|-------|-------------|-----------|--------|
 | `SONG_PLAYS_10` | Song played ≥ 10 times | `"10 plays"` | `"You've played {title} 10 times"` | `"{duration} total", "#{rank} all-time"` | Album art background |
 | `SONG_PLAYS_25` | Song played ≥ 25 times | `"25 plays"` | `"You've played {title} 25 times"` | `"{duration} total", "#{rank} all-time"` | Album art background |
 | `SONG_PLAYS_50` | Song played ≥ 50 times | `"50 plays"` | `"You've played {title} 50 times"` | `"{duration} total", "#{rank} all-time"` | Album art background |
@@ -36,8 +36,8 @@ Thresholds: `10 / 25 / 50 / 100 / 250 / 500`
 Triggered when cumulative listening time for an artist crosses a threshold.
 Thresholds: `1 / 5 / 10 / 24` hours
 
-| Type | Trigger | Title | Description | StatLine | Visual |
-|------|---------|-------|-------------|----------|--------|
+| Type | Trigger | Title | Description | StatLines | Visual |
+|------|---------|-------|-------------|-----------|--------|
 | `ARTIST_HOURS_1` | Artist listened to ≥ 1 hour total | `"1 hour of {artist}"` | `"You've spent 1 hour listening to {artist}"` | `"{play_count} plays", "{unique_songs} songs heard"` | Artist image background |
 | `ARTIST_HOURS_5` | Artist listened to ≥ 5 hours total | `"5 hours of {artist}"` | `"You've spent 5 hours listening to {artist}"` | `"{play_count} plays", "{unique_songs} songs heard"` | Artist image background |
 | `ARTIST_HOURS_10` | Artist listened to ≥ 10 hours total | `"10 hours of {artist}"` | `"You've spent 10 hours listening to {artist}"` | `"{play_count} plays", "{unique_songs} songs heard"` | Artist image background |
@@ -53,8 +53,8 @@ Thresholds: `1 / 5 / 10 / 24` hours
 Triggered when the current consecutive-day listening streak reaches a threshold.
 Thresholds: `3 / 7 / 14 / 30 / 100` days
 
-| Type | Trigger | Title | Description | StatLine | Visual |
-|------|---------|-------|-------------|----------|--------|
+| Type | Trigger | Title | Description | StatLines | Visual |
+|------|---------|-------|-------------|-----------|--------|
 | `STREAK_3` | 3 consecutive days with listening | `"3-day streak"` | `"3 days in a row — you're on fire"` | `"avg {avg_mins}min/day", "{unique_songs} songs this streak"` | Dark placeholder bg (radial gradient accent) |
 | `STREAK_7` | 7 consecutive days with listening | `"7-day streak"` | `"7 days in a row — you're on fire"` | `"avg {avg_mins}min/day", "{unique_songs} songs this streak"` | Dark placeholder bg |
 | `STREAK_14` | 14 consecutive days with listening | `"14-day streak"` | `"14 days in a row — you're on fire"` | `"avg {avg_mins}min/day", "{unique_songs} songs this streak"` | Dark placeholder bg |
@@ -71,8 +71,8 @@ Thresholds: `3 / 7 / 14 / 30 / 100` days
 Triggered when cumulative all-time listening time crosses a threshold.
 Thresholds: `24 / 100 / 500 / 1000` hours
 
-| Type | Trigger | Title | Description | StatLine | Visual |
-|------|---------|-------|-------------|----------|--------|
+| Type | Trigger | Title | Description | StatLines | Visual |
+|------|---------|-------|-------------|-----------|--------|
 | `TOTAL_HOURS_24` | Total listening ≥ 24h | `"24 hours"` | `"You've listened to 24h of music in total"` | `"{unique_songs} unique songs", "{unique_artists} artists"` | Dark placeholder bg |
 | `TOTAL_HOURS_100` | Total listening ≥ 100h | `"100 hours"` | `"You've listened to 100h of music in total"` | `"{unique_songs} unique songs", "{unique_artists} artists"` | Dark placeholder bg |
 | `TOTAL_HOURS_500` | Total listening ≥ 500h | `"500 hours"` | `"You've listened to 500h of music in total"` | `"{unique_songs} unique songs", "{unique_artists} artists"` | Dark placeholder bg |
@@ -87,8 +87,8 @@ Thresholds: `24 / 100 / 500 / 1000` hours
 Triggered when the number of unique songs ever heard crosses a threshold.
 Thresholds: `50 / 100 / 250 / 500` unique songs
 
-| Type | Trigger | Title | Description | StatLine | Visual |
-|------|---------|-------|-------------|----------|--------|
+| Type | Trigger | Title | Description | StatLines | Visual |
+|------|---------|-------|-------------|-----------|--------|
 | `SONGS_DISCOVERED_50` | ≥ 50 unique songs heard | `"50 songs"` | `"You've discovered 50 unique songs"` | `"from {unique_artists} artists", "{total_hours}h of music"` | Dark placeholder bg |
 | `SONGS_DISCOVERED_100` | ≥ 100 unique songs heard | `"100 songs"` | `"You've discovered 100 unique songs"` | `"from {unique_artists} artists", "{total_hours}h of music"` | Dark placeholder bg |
 | `SONGS_DISCOVERED_250` | ≥ 250 unique songs heard | `"250 songs"` | `"You've discovered 250 unique songs"` | `"from {unique_artists} artists", "{total_hours}h of music"` | Dark placeholder bg |
@@ -103,8 +103,8 @@ Thresholds: `50 / 100 / 250 / 500` unique songs
 Detected monthly; idempotent by `yyyy-MM` entity key (fires at most once per calendar month per type).
 Window: last 30 days of listening data.
 
-| Type | Trigger | Title | Description | StatLine | Visual |
-|------|---------|-------|-------------|----------|--------|
+| Type | Trigger | Title | Description | StatLines | Visual |
+|------|---------|-------|-------------|-----------|--------|
 | `ARCHETYPE_NIGHT_OWL` | 10pm–3am > 50% of listening time | `"Night Owl"` | `"You do most of your listening after 10pm"` | `"{pct}% of your listening", "peak: {peak_hour}"` | Dark placeholder bg |
 | `ARCHETYPE_MORNING_LISTENER` | 5am–8am > 50% of listening time | `"Morning Listener"` | `"You do most of your listening before 9am"` | `"{pct}% of your listening", "peak: {peak_hour}am"` | Dark placeholder bg |
 | `ARCHETYPE_COMMUTE_LISTENER` | (7–8am + 5–6pm) > 30% of listening time | `"Commute Listener"` | `"Your listening peaks at 7–9am and 5–7pm"` | `"{pct}% during commute hours", "{days} days this month"` | Dark placeholder bg |
@@ -128,8 +128,8 @@ Window: last 30 days of listening data.
 
 ## 7. Behavioral / Daily-Weekly (13 types)
 
-| Type | Trigger | Title | Description | StatLine | Visual |
-|------|---------|-------|-------------|----------|--------|
+| Type | Trigger | Title | Description | StatLines | Visual |
+|------|---------|-------|-------------|-----------|--------|
 | `OBSESSION_DAILY` | Song played ≥ 5× in today's calendar day | `"{count}x in one day"` | `"You played {title} {count} times today. Are you okay?"` | `"{count} plays today", "{total_plays} all-time"` | Album art background |
 | `DAILY_RITUAL` | Song played on all 7 of the last 7 consecutive days | `"Daily ritual"` | `"You've listened to {title} every day for 7 days"` | `"{total_plays} all-time plays", "{total_duration} total"` | Album art background |
 | `BREAKUP_CANDIDATE` | Artist skipped ≥ 10× in past 7 days | `"Maybe break up?"` | `"You've skipped {artist} {count} times this week"` | `"{count} skips this week", "{plays} plays this week"` | Artist image background |
