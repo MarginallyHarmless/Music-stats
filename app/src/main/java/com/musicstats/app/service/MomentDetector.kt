@@ -27,6 +27,9 @@ class MomentDetector @Inject constructor(
     }
 
     suspend fun detectAndPersistNewMoments(): List<Moment> {
+        // Backfill imageUrl on existing moments where artist image was fetched after detection
+        momentDao.backfillArtistImageUrls()
+
         val newMoments = mutableListOf<Moment>()
         val now = System.currentTimeMillis()
         val thirtyDaysAgo = now - 30L * 24 * 3600 * 1000

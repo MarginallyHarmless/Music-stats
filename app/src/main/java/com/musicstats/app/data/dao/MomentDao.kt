@@ -33,4 +33,7 @@ interface MomentDao {
 
     @Query("SELECT COUNT(*) FROM moments WHERE seenAt IS NULL AND type != 'ARTIST_UNLOCKED'")
     fun getUnseenCount(): Flow<Int>
+
+    @Query("UPDATE moments SET imageUrl = (SELECT imageUrl FROM artists WHERE artists.id = moments.artistId) WHERE artistId IS NOT NULL AND imageUrl IS NULL")
+    suspend fun backfillArtistImageUrls()
 }
