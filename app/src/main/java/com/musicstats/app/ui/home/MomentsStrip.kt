@@ -118,15 +118,38 @@ private fun MomentFeedCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                val imageShape = if (moment.artistId != null) CircleShape else RoundedCornerShape(4.dp)
-                if (moment.imageUrl != null) {
+                if (moment.artistId != null && moment.imageUrl != null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        AsyncImage(
+                            model = moment.imageUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(24.dp).clip(CircleShape)
+                        )
+                        if (moment.entityName != null) {
+                            Text(
+                                text = moment.entityName,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                } else if (moment.imageUrl != null) {
                     AsyncImage(
                         model = moment.imageUrl,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .size(36.dp)
-                            .clip(imageShape)
+                            .clip(RoundedCornerShape(4.dp))
                     )
                 } else if (isArchetype) {
                     Text(archetypeEmojiSmall(moment.type), fontSize = 20.sp)
