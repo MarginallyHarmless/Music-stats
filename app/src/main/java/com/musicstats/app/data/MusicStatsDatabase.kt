@@ -105,10 +105,12 @@ abstract class MusicStatsDatabase : RoomDatabase() {
                         title TEXT NOT NULL,
                         description TEXT NOT NULL,
                         songId INTEGER,
-                        artistId INTEGER,
-                        UNIQUE(type, entityKey)
+                        artistId INTEGER
                     )
                 """)
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_moments_type_entityKey` ON `moments` (`type`, `entityKey`)"
+                )
             }
         }
     }
