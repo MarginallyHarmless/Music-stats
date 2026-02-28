@@ -1,5 +1,6 @@
 package com.musicstats.app.service
 
+import com.musicstats.app.util.formatDuration
 import com.musicstats.app.data.dao.ArtistDao
 import com.musicstats.app.data.dao.ListeningEventDao
 import com.musicstats.app.data.dao.MomentDao
@@ -45,7 +46,6 @@ class MomentDetector @Inject constructor(
         newMoments += detectBreakupCandidate(sevenDaysAgo, now)
         newMoments += detectFastObsession(now)
         newMoments += detectLongestSession(now)
-        newMoments += detectArtistUnlocked(sevenDaysAgo, now)
         newMoments += detectQuickObsession(sevenDaysAgo, now)
         newMoments += detectDiscoveryWeek(sevenDaysAgo, now, yearMonth)
 
@@ -70,7 +70,8 @@ class MomentDetector @Inject constructor(
                         triggeredAt = System.currentTimeMillis(),
                         title = "$threshold plays",
                         description = "You've played ${song.title} $threshold times",
-                        songId = song.songId
+                        songId = song.songId,
+                        statLine = "${formatDuration(song.totalDurationMs)} total"
                     ))?.let { result += it }
                 }
             }
@@ -93,7 +94,8 @@ class MomentDetector @Inject constructor(
                         triggeredAt = System.currentTimeMillis(),
                         title = "$humanHours of ${artist.artist}",
                         description = "You've spent $humanHours listening to ${artist.artist}",
-                        artistId = artistEntity?.id
+                        artistId = artistEntity?.id,
+                        statLine = "${artist.playCount} total plays"
                     ))?.let { result += it }
                 }
             }
@@ -166,25 +168,31 @@ class MomentDetector @Inject constructor(
         val commutePmMs = hourly.filter { it.hour in 17..18 }.sumOf { it.totalDurationMs }
 
         if (nightMs.toDouble() / totalMs > 0.5) {
+            val nightPct = (nightMs * 100 / totalMs).toInt()
             persistIfNew(Moment(
                 type = "ARCHETYPE_NIGHT_OWL", entityKey = yearMonth, triggeredAt = now,
                 title = "Night Owl",
-                description = "You do most of your listening after 10pm"
+                description = "You do most of your listening after 10pm",
+                statLine = "$nightPct% of your listening"
             ))?.let { result += it }
         }
         if (morningMs.toDouble() / totalMs > 0.5) {
+            val morningPct = (morningMs * 100 / totalMs).toInt()
             persistIfNew(Moment(
                 type = "ARCHETYPE_MORNING_LISTENER", entityKey = yearMonth, triggeredAt = now,
                 title = "Morning Listener",
-                description = "You do most of your listening before 9am"
+                description = "You do most of your listening before 9am",
+                statLine = "$morningPct% of your listening"
             ))?.let { result += it }
         }
         if (totalMs > 1L && commuteAmMs > 0 && commutePmMs > 0 &&
             (commuteAmMs + commutePmMs).toDouble() / totalMs > 0.3) {
+            val commutePct = ((commuteAmMs + commutePmMs) * 100 / totalMs).toInt()
             persistIfNew(Moment(
                 type = "ARCHETYPE_COMMUTE_LISTENER", entityKey = yearMonth, triggeredAt = now,
                 title = "Commute Listener",
-                description = "Your listening peaks at 7–9am and 5–7pm"
+                description = "Your listening peaks at 7–9am and 5–7pm",
+                statLine = "$commutePct% during commute hours"
             ))?.let { result += it }
         }
 
@@ -192,17 +200,21 @@ class MomentDetector @Inject constructor(
         val totalSkips = eventDao.getTotalSkipCountSuspend()
         val skipRate = totalSkips.toDouble() / (totalPlays + totalSkips)
         if (skipRate < 0.05) {
+            val skipPct = "%.1f".format(skipRate * 100)
             persistIfNew(Moment(
                 type = "ARCHETYPE_COMPLETIONIST", entityKey = yearMonth, triggeredAt = now,
                 title = "Completionist",
-                description = "You skip less than 5% of songs — truly dedicated"
+                description = "You skip less than 5% of songs — truly dedicated",
+                statLine = "${skipPct}% skip rate"
             ))?.let { result += it }
         }
         if (skipRate > 0.40) {
+            val skipPct = "%.1f".format(skipRate * 100)
             persistIfNew(Moment(
                 type = "ARCHETYPE_CERTIFIED_SKIPPER", entityKey = yearMonth, triggeredAt = now,
                 title = "Certified Skipper",
-                description = "You skip more than 40% of songs. Nothing is good enough."
+                description = "You skip more than 40% of songs. Nothing is good enough.",
+                statLine = "${skipPct}% skip rate"
             ))?.let { result += it }
         }
 
@@ -211,7 +223,8 @@ class MomentDetector @Inject constructor(
             persistIfNew(Moment(
                 type = "ARCHETYPE_DEEP_CUT_DIGGER", entityKey = yearMonth, triggeredAt = now,
                 title = "Deep Cut Digger",
-                description = "You've listened to ${deepCuts[0].title} over 50 times"
+                description = "You've listened to ${deepCuts[0].title} over 50 times",
+                statLine = "${deepCuts[0].playCount} plays"
             ))?.let { result += it }
         }
 
@@ -221,11 +234,13 @@ class MomentDetector @Inject constructor(
             val allMs = eventDao.getTotalListeningTimeMsSuspend().coerceAtLeast(1L)
             if (topMs.toDouble() / allMs > 0.5) {
                 val artistEntity = artistDao.findByName(topArtists[0].artist)
+                val topPct = (topMs * 100 / allMs).toInt()
                 persistIfNew(Moment(
                     type = "ARCHETYPE_LOYAL_FAN", entityKey = yearMonth, triggeredAt = now,
                     title = "Loyal Fan",
                     description = "Over 50% of your listening is ${topArtists[0].artist}",
-                    artistId = artistEntity?.id
+                    artistId = artistEntity?.id,
+                    statLine = "$topPct% of your listening"
                 ))?.let { result += it }
             }
         }
@@ -339,22 +354,6 @@ class MomentDetector @Inject constructor(
                 triggeredAt = now,
                 title = "New record: $label",
                 description = "New personal best: $label in one sitting"
-            ))?.let { result += it }
-        }
-        return result
-    }
-
-    private suspend fun detectArtistUnlocked(sevenDaysAgo: Long, now: Long): List<Moment> {
-        val result = mutableListOf<Moment>()
-        val newArtists = artistDao.getArtistsSince(sevenDaysAgo)
-        for (artist in newArtists) {
-            persistIfNew(Moment(
-                type = "ARTIST_UNLOCKED",
-                entityKey = "${artist.id}",
-                triggeredAt = now,
-                title = "New artist",
-                description = "New artist unlocked: ${artist.name}",
-                artistId = artist.id
             ))?.let { result += it }
         }
         return result
