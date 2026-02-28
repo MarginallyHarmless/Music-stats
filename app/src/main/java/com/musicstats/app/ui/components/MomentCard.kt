@@ -3,13 +3,14 @@ package com.musicstats.app.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -21,17 +22,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.musicstats.app.data.model.Moment
-import java.text.SimpleDateFormat
-import java.util.Date
+import com.musicstats.app.ui.theme.LocalAlbumPalette
 import java.util.Locale
+
+private val CardShape = RoundedCornerShape(20.dp)
 
 @Composable
 fun MomentCard(
@@ -40,144 +43,132 @@ fun MomentCard(
     modifier: Modifier = Modifier
 ) {
     val isUnseen = moment.seenAt == null
-    val isArchetype = moment.type.startsWith("ARCHETYPE_")
+    val palette = LocalAlbumPalette.current
     val dateStr = remember(moment.triggeredAt) {
-        SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(moment.triggeredAt))
+        java.time.Instant.ofEpochMilli(moment.triggeredAt)
+            .atZone(java.time.ZoneId.systemDefault())
+            .toLocalDate()
+            .format(java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault()))
     }
+    val backgroundModel: Any? = moment.imageUrl ?: momentBackgroundDrawable(moment.type)
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer,
-                        MaterialTheme.colorScheme.tertiaryContainer
+            .heightIn(min = 180.dp)
+            .then(
+                if (isUnseen) Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, CardShape)
+                else Modifier
+            )
+            .clip(CardShape)
+            .clickable(onClick = onTap)
+    ) {
+        // Layer 1: image or dark placeholder
+        if (backgroundModel != null) {
+            AsyncImage(
+                model = backgroundModel,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize()
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(Color(0xFF1A1A28))
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                palette.accent.copy(alpha = 0.25f),
+                                Color.Transparent
+                            ),
+                            center = Offset(0f, 0f),
+                            radius = 600f
+                        )
+                    )
+            )
+        }
+
+        // Layer 2: scrim
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.70f)
+                        )
                     )
                 )
-            )
-            .clickable(onClick = onTap)
-            .then(
-                if (isUnseen) Modifier.border(
-                    1.5.dp,
-                    MaterialTheme.colorScheme.primary,
-                    RoundedCornerShape(16.dp)
-                ) else Modifier
-            )
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            if (moment.artistId != null && moment.entityName != null) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    if (moment.imageUrl != null) {
-                        AsyncImage(
-                            model = moment.imageUrl,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.size(40.dp).clip(CircleShape)
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                        )
-                    }
-                    Column {
-                        Text(
-                            text = moment.entityName ?: "",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        if (moment.statLine != null) {
-                            Text(
-                                text = moment.statLine,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
-                                maxLines = 1
-                            )
-                        }
-                    }
-                }
-            } else if (moment.imageUrl != null) {
-                AsyncImage(
-                    model = moment.imageUrl,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                )
-            } else if (isArchetype) {
-                Text(momentEmoji(moment.type), fontSize = 28.sp)
-            } else {
-                Text("🎵", fontSize = 28.sp)
-            }
+        )
 
-            Column(modifier = Modifier.weight(1f)) {
+        // Layer 3: text anchored to bottom
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomStart)
+                .padding(horizontal = 16.dp, vertical = 14.dp)
+        ) {
+            if (moment.entityName != null) {
                 Text(
-                    text = moment.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    text = moment.entityName,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.65f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                Spacer(Modifier.height(2.dp))
+            }
+            Text(
+                text = moment.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = moment.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.70f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (moment.statLine != null) {
+                Spacer(Modifier.height(2.dp))
                 Text(
-                    text = moment.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    text = moment.statLine,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
                 )
-                if (moment.artistId == null && moment.statLine != null) {
-                    Text(
-                        text = moment.statLine,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                }
-                Spacer(Modifier.height(4.dp))
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = dateStr,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f)
+                    color = Color.White.copy(alpha = 0.40f),
+                    modifier = Modifier.weight(1f)
                 )
-            }
-
-            if (isUnseen) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
-                )
+                if (isUnseen) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(Color.White)
+                    )
+                }
             }
         }
     }
 }
 
-fun momentEmoji(type: String): String = when {
-    type.contains("NIGHT_OWL") -> "🌙"
-    type.contains("MORNING") -> "☀️"
-    type.contains("COMMUTE") -> "🎧"
-    type.contains("COMPLETIONIST") -> "✅"
-    type.contains("SKIPPER") -> "⏭️"
-    type.contains("DEEP_CUT") -> "💿"
-    type.contains("LOYAL_FAN") -> "❤️"
-    type.contains("EXPLORER") -> "🧭"
-    else -> "🎵"
-}
+/**
+ * Returns a local drawable resource ID for the given moment type, or null if none is
+ * configured yet. Add entries here when custom background images are provided.
+ */
+private fun momentBackgroundDrawable(type: String): Int? = null
