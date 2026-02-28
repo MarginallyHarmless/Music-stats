@@ -37,7 +37,7 @@ fun ListeningTimeChart(dailyData: List<DailyListening>, modifier: Modifier = Mod
         }
     }
 
-    val maxMs = remember(entries) { entries.maxOfOrNull { it.second } ?: 1L }
+    val maxMs = remember(entries) { entries.maxOfOrNull { it.second }?.takeIf { it > 0L } ?: 1L }
 
     Canvas(modifier = modifier) {
         val labelTextSizePx = 10.sp.toPx()
@@ -70,7 +70,11 @@ fun ListeningTimeChart(dailyData: List<DailyListening>, modifier: Modifier = Mod
 
             // Compute bar height
             val fraction = if (maxMs > 0) ms.toFloat() / maxMs.toFloat() else 0f
-            val barHeight = (fraction * chartHeight).coerceAtLeast(minBarHeight)
+            val barHeight = if (ms == 0L) {
+                minBarHeight
+            } else {
+                (fraction * chartHeight).coerceAtLeast(minBarHeight)
+            }
             val top = chartHeight - barHeight
 
             val color = when {
