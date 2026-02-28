@@ -52,7 +52,7 @@ fun AllMomentsScreen(
     val moments by viewModel.moments.collectAsState()
     val context = LocalContext.current
     var selectedMoment by remember { mutableStateOf<Moment?>(null) }
-    var showShareSheet by remember { mutableStateOf(false) }
+    var showMomentDetail by remember { mutableStateOf(false) }
 
     AuroraBackground {
         Column(
@@ -89,7 +89,7 @@ fun AllMomentsScreen(
                             onTap = {
                                 viewModel.markSeen(moment.id)
                                 selectedMoment = moment
-                                showShareSheet = true
+                                showMomentDetail = true
                             }
                         )
                     }
@@ -99,21 +99,30 @@ fun AllMomentsScreen(
         }
     }
 
-    if (showShareSheet) {
+    if (showMomentDetail) {
         selectedMoment?.let { moment ->
-            val density = context.resources.displayMetrics.density
-            val w = (360 * density).toInt()
-            val h = (640 * density).toInt()
-            ShareCardRenderer.renderComposable(context, w, h, {
-                MusicStatsTheme {
-                    MomentShareCard(moment = moment)
+            MomentDetailBottomSheet(
+                moment = moment,
+                onShare = {
+                    val density = context.resources.displayMetrics.density
+                    val w = (360 * density).toInt()
+                    val h = (640 * density).toInt()
+                    ShareCardRenderer.renderComposable(context, w, h, {
+                        MusicStatsTheme {
+                            MomentShareCard(moment = moment)
+                        }
+                    }) { bitmap ->
+                        ShareCardRenderer.shareBitmap(context, bitmap)
+                        viewModel.markShared(moment.id)
+                    }
+                    showMomentDetail = false
+                    selectedMoment = null
+                },
+                onDismiss = {
+                    showMomentDetail = false
+                    selectedMoment = null
                 }
-            }) { bitmap ->
-                ShareCardRenderer.shareBitmap(context, bitmap)
-                viewModel.markShared(moment.id)
-            }
-            showShareSheet = false
-            selectedMoment = null
+            )
         }
     }
 }
