@@ -97,7 +97,8 @@ class MomentDetector @Inject constructor(
                         description = "You've spent $humanHours listening to ${artist.artist}",
                         artistId = artistEntity?.id,
                         statLine = "${artist.playCount} total plays",
-                        imageUrl = artistEntity?.imageUrl
+                        imageUrl = artistEntity?.imageUrl,
+                        entityName = artist.artist
                     ))?.let { result += it }
                 }
             }
@@ -243,8 +244,9 @@ class MomentDetector @Inject constructor(
                     title = "Loyal Fan",
                     description = "Over 50% of your listening is ${topArtists[0].artist}",
                     artistId = artistEntity?.id,
-                    statLine = "$topPct% of your listening",
-                    imageUrl = artistEntity?.imageUrl
+                    statLine = "$topPct% · ${topArtists[0].playCount} plays",
+                    imageUrl = artistEntity?.imageUrl,
+                    entityName = topArtists[0].artist
                 ))?.let { result += it }
             }
         }
@@ -321,7 +323,9 @@ class MomentDetector @Inject constructor(
                     title = "Maybe break up?",
                     description = "You've skipped ${artistStats.artist} $skipCount times this week",
                     artistId = artistEntity?.id,
-                    imageUrl = artistEntity?.imageUrl
+                    statLine = "$skipCount skips this week",
+                    imageUrl = artistEntity?.imageUrl,
+                    entityName = artistStats.artist
                 ))?.let { result += it }
             }
         }
