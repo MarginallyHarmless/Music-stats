@@ -99,21 +99,23 @@ fun MomentDetailBottomSheet(
             )
 
             if (moment.statLines.isNotEmpty()) {
-                moment.statLines.forEach { stat ->
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                MaterialTheme.colorScheme.primaryContainer,
-                                RoundedCornerShape(50)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    moment.statLines.forEach { stat ->
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    MaterialTheme.colorScheme.primaryContainer,
+                                    RoundedCornerShape(50)
+                                )
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = stat,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = stat,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                        }
                     }
                 }
             }
