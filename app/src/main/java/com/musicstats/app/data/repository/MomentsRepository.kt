@@ -13,6 +13,8 @@ class MomentsRepository @Inject constructor(
     fun getRecentMoments(limit: Int = 10): Flow<List<Moment>> =
         momentDao.getRecentMoments(limit)
 
+    fun getAllMoments(): Flow<List<Moment>> = momentDao.getAllMoments()
+
     fun getUnseenCount(): Flow<Int> = momentDao.getUnseenCount()
 
     suspend fun markSeen(id: Long) = momentDao.markSeen(id, System.currentTimeMillis())
