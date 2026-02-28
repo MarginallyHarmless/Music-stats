@@ -63,7 +63,7 @@ dependencies {
     testImplementation(libs.room.testing)
 
     implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
+    ksp(libs.hilt.compiler)           // com.google.dagger:hilt-compiler
     implementation(libs.hilt.navigation.compose)
 
     implementation(libs.kotlinx.serialization.json)
@@ -80,9 +80,9 @@ dependencies {
     implementation(libs.coil.network.okhttp)
     implementation(libs.palette.ktx)
 
-    implementation("androidx.work:work-runtime-ktx:2.10.0")
-    implementation("androidx.hilt:hilt-work:1.2.0")
-    ksp("androidx.hilt:hilt-compiler:1.2.0")
+    implementation(libs.work.runtime.ktx)
+    implementation(libs.hilt.work)
+    ksp(libs.hilt.work.compiler)      // androidx.hilt:hilt-compiler (for @HiltWorker)
 
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
