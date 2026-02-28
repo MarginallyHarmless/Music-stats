@@ -476,7 +476,7 @@ interface ListeningEventDao {
     suspend fun getSongsPlayedOnDay(dayStart: Long, dayEnd: Long): List<SongPlayStats>
 
     @Query("""
-        SELECT DISTINCT date(startedAt / 1000, 'unixepoch') as day
+        SELECT DISTINCT date(startedAt / 1000, 'unixepoch', 'localtime') as day
         FROM listening_events
         WHERE songId = :songId AND completed = 1 AND startedAt >= :since
         ORDER BY day DESC
@@ -491,7 +491,7 @@ interface ListeningEventDao {
     """)
     suspend fun getWeekendListeningMsSuspend(since: Long): Long
 
-    // Total listening ms since a timestamp (suspend version of the Flow getListeningTimeSince)
+    // Total completed listening ms since a timestamp (for statline calculations — counts only completed plays)
     @Query("SELECT COALESCE(SUM(durationMs), 0) FROM listening_events WHERE startedAt >= :since AND completed = 1")
     suspend fun getListeningTimeSinceSuspend(since: Long): Long
 
