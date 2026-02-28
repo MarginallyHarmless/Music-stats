@@ -64,6 +64,7 @@ import com.musicstats.app.ui.components.ListeningTimeChart
 import com.musicstats.app.ui.components.MomentShareCard
 import com.musicstats.app.ui.components.SectionHeader
 import com.musicstats.app.ui.components.StatCard
+import com.musicstats.app.ui.moments.MomentDetailBottomSheet
 import com.musicstats.app.ui.share.DailyRecapCard
 import com.musicstats.app.ui.share.ShareBottomSheet
 import com.musicstats.app.ui.share.ShareCardRenderer
@@ -109,7 +110,7 @@ fun HomeScreen(
     var listenerEnabled by remember { mutableStateOf(isNotificationListenerEnabled(context)) }
     var showShareSheet by remember { mutableStateOf(false) }
     var selectedMoment by remember { mutableStateOf<Moment?>(null) }
-    var showMomentShareSheet by remember { mutableStateOf(false) }
+    var showMomentDetail by remember { mutableStateOf(false) }
 
     androidx.compose.runtime.LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -402,7 +403,7 @@ fun HomeScreen(
             onMomentTap = { moment ->
                 viewModel.markMomentSeen(moment.id)
                 selectedMoment = moment
-                showMomentShareSheet = true
+                showMomentDetail = true
             },
             onSeeAll = onSeeAllMoments
         )
@@ -538,21 +539,30 @@ fun HomeScreen(
             )
         }
 
-        if (showMomentShareSheet) {
+        if (showMomentDetail) {
             selectedMoment?.let { moment ->
-                val density = context.resources.displayMetrics.density
-                val w = (360 * density).toInt()
-                val h = (640 * density).toInt()
-                ShareCardRenderer.renderComposable(context, w, h, {
-                    MusicStatsTheme {
-                        MomentShareCard(moment = moment)
+                MomentDetailBottomSheet(
+                    moment = moment,
+                    onShare = {
+                        val density = context.resources.displayMetrics.density
+                        val w = (360 * density).toInt()
+                        val h = (640 * density).toInt()
+                        ShareCardRenderer.renderComposable(context, w, h, {
+                            MusicStatsTheme {
+                                MomentShareCard(moment = moment)
+                            }
+                        }) { bitmap ->
+                            ShareCardRenderer.shareBitmap(context, bitmap)
+                            viewModel.markMomentShared(moment.id)
+                        }
+                        showMomentDetail = false
+                        selectedMoment = null
+                    },
+                    onDismiss = {
+                        showMomentDetail = false
+                        selectedMoment = null
                     }
-                }) { bitmap ->
-                    ShareCardRenderer.shareBitmap(context, bitmap)
-                    viewModel.markMomentShared(moment.id)
-                }
-                showMomentShareSheet = false
-                selectedMoment = null
+                )
             }
         }
 
