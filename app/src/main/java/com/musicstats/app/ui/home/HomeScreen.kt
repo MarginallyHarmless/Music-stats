@@ -75,6 +75,7 @@ import com.musicstats.app.util.formatDuration
 fun HomeScreen(
     onSongClick: (Long) -> Unit = {},
     onArtistClick: (String) -> Unit = {},
+    onSeeAllMoments: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val todayMs by viewModel.todayListeningTimeMs.collectAsState()
@@ -403,7 +404,7 @@ fun HomeScreen(
                 selectedMoment = moment
                 showMomentShareSheet = true
             },
-            onSeeAll = { /* TODO: future - navigate to full moments list */ }
+            onSeeAll = onSeeAllMoments
         )
 
         // 7. Weekly chart section
