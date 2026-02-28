@@ -71,7 +71,8 @@ class MomentDetector @Inject constructor(
                         title = "$threshold plays",
                         description = "You've played ${song.title} $threshold times",
                         songId = song.songId,
-                        statLine = "${formatDuration(song.totalDurationMs)} total"
+                        statLine = "${formatDuration(song.totalDurationMs)} total",
+                        imageUrl = song.albumArtUrl
                     ))?.let { result += it }
                 }
             }
@@ -95,7 +96,8 @@ class MomentDetector @Inject constructor(
                         title = "$humanHours of ${artist.artist}",
                         description = "You've spent $humanHours listening to ${artist.artist}",
                         artistId = artistEntity?.id,
-                        statLine = "${artist.playCount} total plays"
+                        statLine = "${artist.playCount} total plays",
+                        imageUrl = artistEntity?.imageUrl
                     ))?.let { result += it }
                 }
             }
@@ -224,7 +226,8 @@ class MomentDetector @Inject constructor(
                 type = "ARCHETYPE_DEEP_CUT_DIGGER", entityKey = yearMonth, triggeredAt = now,
                 title = "Deep Cut Digger",
                 description = "You've listened to ${deepCuts[0].title} over 50 times",
-                statLine = "${deepCuts[0].playCount} plays"
+                statLine = "${deepCuts[0].playCount} plays",
+                imageUrl = deepCuts[0].albumArtUrl
             ))?.let { result += it }
         }
 
@@ -240,7 +243,8 @@ class MomentDetector @Inject constructor(
                     title = "Loyal Fan",
                     description = "Over 50% of your listening is ${topArtists[0].artist}",
                     artistId = artistEntity?.id,
-                    statLine = "$topPct% of your listening"
+                    statLine = "$topPct% of your listening",
+                    imageUrl = artistEntity?.imageUrl
                 ))?.let { result += it }
             }
         }
@@ -270,7 +274,8 @@ class MomentDetector @Inject constructor(
                     triggeredAt = now,
                     title = "${song.playCount}x in one day",
                     description = "You played ${song.title} ${song.playCount} times today. Are you okay?",
-                    songId = song.songId
+                    songId = song.songId,
+                    imageUrl = song.albumArtUrl
                 ))?.let { result += it }
             }
         }
@@ -293,7 +298,8 @@ class MomentDetector @Inject constructor(
                     triggeredAt = now,
                     title = "Daily ritual",
                     description = "You've listened to ${song.title} every day for 7 days",
-                    songId = song.songId
+                    songId = song.songId,
+                    imageUrl = song.albumArtUrl
                 ))?.let { result += it }
             }
         }
@@ -314,7 +320,8 @@ class MomentDetector @Inject constructor(
                     triggeredAt = now,
                     title = "Maybe break up?",
                     description = "You've skipped ${artistStats.artist} $skipCount times this week",
-                    artistId = artistEntity?.id
+                    artistId = artistEntity?.id,
+                    imageUrl = artistEntity?.imageUrl
                 ))?.let { result += it }
             }
         }
@@ -334,7 +341,8 @@ class MomentDetector @Inject constructor(
                     triggeredAt = now,
                     title = "${song.playCount} plays in $ageDays days",
                     description = "${song.title} came into your life $ageDays days ago. You've played it ${song.playCount} times.",
-                    songId = song.songId
+                    songId = song.songId,
+                    imageUrl = song.albumArtUrl
                 ))?.let { result += it }
             }
         }
@@ -373,7 +381,8 @@ class MomentDetector @Inject constructor(
                 triggeredAt = now,
                 title = "Fast obsession",
                 description = "You discovered ${song.title} $ageDays days ago. It's already in your top 5.",
-                songId = song.songId
+                songId = song.songId,
+                imageUrl = song.albumArtUrl
             ))?.let { result += it }
         }
         return result
