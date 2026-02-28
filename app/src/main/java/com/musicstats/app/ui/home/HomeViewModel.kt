@@ -1,16 +1,19 @@
 package com.musicstats.app.ui.home
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.musicstats.app.data.dao.DailyListening
 import com.musicstats.app.data.dao.SongPlayStats
 import com.musicstats.app.data.repository.MusicRepository
 import com.musicstats.app.service.MediaSessionTracker
+import com.musicstats.app.service.MomentWorker
 import com.musicstats.app.util.daysAgo
 import com.musicstats.app.util.startOfToday
 import com.musicstats.app.util.startOfWeek
 import com.musicstats.app.util.startOfYesterday
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -24,7 +27,8 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val repository: MusicRepository,
-    val mediaSessionTracker: MediaSessionTracker
+    val mediaSessionTracker: MediaSessionTracker,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     val greeting: String
@@ -47,6 +51,7 @@ class HomeViewModel @Inject constructor(
         repository.backfillArtistImages()
         repository.backfillAlbumArt()
         repository.backfillPaletteColors()
+        MomentWorker.schedule(context)
     }
 
     val todayListeningTimeMs: StateFlow<Long> =
