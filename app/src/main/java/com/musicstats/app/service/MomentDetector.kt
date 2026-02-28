@@ -51,6 +51,12 @@ class MomentDetector @Inject constructor(
         newMoments += detectLongestSession(now)
         newMoments += detectQuickObsession(sevenDaysAgo, now)
         newMoments += detectDiscoveryWeek(sevenDaysAgo, now, yearMonth)
+        newMoments += detectResurrection(todayStart, now)
+        newMoments += detectNightBinge(now)
+        newMoments += detectComfortZone(sevenDaysAgo, now)
+        newMoments += detectRediscovery(sevenDaysAgo, now)
+        newMoments += detectSlowBurn(sevenDaysAgo, now)
+        newMoments += detectMarathonWeek(now)
 
         return newMoments
     }
@@ -542,6 +548,161 @@ class MomentDetector @Inject constructor(
                 title = "$newArtistsCount new artists",
                 description = "You discovered $newArtistsCount new artists this week",
                 statLines = listOf("$newArtistsCount new artists", "$newSongsCount new songs")
+            ))?.let { result += it }
+        }
+        return result
+    }
+
+    private suspend fun detectResurrection(todayStart: Long, now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val todayEnd = todayStart + 86_400_000L
+        val todaySongs = eventDao.getSongsPlayedOnDay(todayStart, todayEnd)
+        val todayDate = LocalDate.now(ZoneId.systemDefault()).toString()
+
+        for (song in todaySongs) {
+            if (song.playCount < 5) continue
+            val lastPlayedBefore = eventDao.getSongLastPlayedBeforeSuspend(song.songId, todayStart) ?: continue
+            val gapDays = (todayStart - lastPlayedBefore) / 86_400_000L
+            if (gapDays >= 30) {
+                persistIfNew(Moment(
+                    type = "RESURRECTION",
+                    entityKey = "${song.songId}:$todayDate",
+                    triggeredAt = now,
+                    title = "It's back",
+                    description = "${song.title} went quiet for $gapDays days. Today it's all you're playing.",
+                    songId = song.songId,
+                    statLines = listOf("$gapDays days away", "${song.playCount} plays today"),
+                    imageUrl = song.albumArtUrl
+                ))?.let { result += it }
+            }
+        }
+        return result
+    }
+
+    private suspend fun detectNightBinge(now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val thirtyDaysAgo = now - 30L * 24 * 3600 * 1000
+        val nightDays = eventDao.getNightListeningByDaySuspend(thirtyDaysAgo)
+
+        for (dayNight in nightDays) {
+            if (dayNight.nightMs >= 2 * 3_600_000L) {
+                val duration = formatDuration(dayNight.nightMs)
+                val songCount = (dayNight.nightMs / 210_000L).toInt().coerceAtLeast(1)
+                persistIfNew(Moment(
+                    type = "NIGHT_BINGE",
+                    entityKey = dayNight.day,
+                    triggeredAt = now,
+                    title = "Night binge",
+                    description = "You listened for $duration after midnight",
+                    statLines = listOf("$duration after midnight", "~$songCount songs")
+                ))?.let { result += it }
+            }
+        }
+        return result
+    }
+
+    private suspend fun detectComfortZone(sevenDaysAgo: Long, now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val weekKey = "W${LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yyyy-ww"))}"
+        val totalPlaysThisWeek = eventDao.getTotalPlayCountInPeriodSuspend(sevenDaysAgo).coerceAtLeast(1L)
+        val top5 = eventDao.getTopSongsInPeriodByPlayCountSuspend(sevenDaysAgo, 5)
+        if (top5.isEmpty()) return result
+        val top5Plays = top5.sumOf { it.playCount }
+        val top5Pct = (top5Plays * 100 / totalPlaysThisWeek).toInt()
+        if (top5Pct >= 80) {
+            val topSong = top5.first()
+            persistIfNew(Moment(
+                type = "COMFORT_ZONE",
+                entityKey = weekKey,
+                triggeredAt = now,
+                title = "Comfort zone",
+                description = "Your top 5 songs made up $top5Pct% of your listening this week",
+                songId = topSong.songId,
+                statLines = listOf("$top5Pct% from 5 songs", "$totalPlaysThisWeek plays this week"),
+                imageUrl = topSong.albumArtUrl
+            ))?.let { result += it }
+        }
+        return result
+    }
+
+    private suspend fun detectRediscovery(sevenDaysAgo: Long, now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val weekKey = "W${LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yyyy-ww"))}"
+        val topArtistsThisWeek = eventDao.getTopArtistsByDurationSuspend(sevenDaysAgo, 5)
+
+        for (artistStats in topArtistsThisWeek) {
+            val playsThisWeek = eventDao.getArtistPlayCountSinceSuspend(artistStats.artist, sevenDaysAgo)
+            if (playsThisWeek < 5) continue
+            val lastPlayedBefore = eventDao.getArtistLastPlayedBeforeSuspend(artistStats.artist, sevenDaysAgo) ?: continue
+            val gapDays = (sevenDaysAgo - lastPlayedBefore) / 86_400_000L
+            if (gapDays >= 60) {
+                val artistEntity = artistDao.findByName(artistStats.artist)
+                persistIfNew(Moment(
+                    type = "REDISCOVERY",
+                    entityKey = "${artistStats.artist}:$weekKey",
+                    triggeredAt = now,
+                    title = "You're back",
+                    description = "You hadn't played ${artistStats.artist} in $gapDays days. Welcome back.",
+                    artistId = artistEntity?.id,
+                    statLines = listOf("$gapDays days away", "$playsThisWeek plays this week"),
+                    imageUrl = artistEntity?.imageUrl,
+                    entityName = artistStats.artist
+                ))?.let { result += it }
+            }
+        }
+        return result
+    }
+
+    private suspend fun detectSlowBurn(sevenDaysAgo: Long, now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val weekKey = "W${LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yyyy-ww"))}"
+        val topThisWeek = eventDao.getTopSongsInPeriodByPlayCountSuspend(sevenDaysAgo, 20)
+
+        for (song in topThisWeek) {
+            val playsThisWeek = eventDao.getSongPlayCountSinceSuspend(song.songId, sevenDaysAgo)
+            if (playsThisWeek < 5) continue
+            val playsBeforeThisWeek = eventDao.getSongPlayCountBeforeSuspend(song.songId, sevenDaysAgo)
+            if (playsBeforeThisWeek >= 5) continue
+            val songDetails = eventDao.getSongsWithMinPlays(0).firstOrNull { it.songId == song.songId } ?: continue
+            val ageDays = (now - songDetails.firstHeardAt) / 86_400_000L
+            if (ageDays < 60) continue
+            val totalPlays = playsBeforeThisWeek + playsThisWeek
+            persistIfNew(Moment(
+                type = "SLOW_BURN",
+                entityKey = "${song.songId}:$weekKey",
+                triggeredAt = now,
+                title = "Slow burn",
+                description = "${song.title} has been in your library for $ageDays days. It just clicked.",
+                songId = song.songId,
+                statLines = listOf("$ageDays days to click", "$totalPlays plays now"),
+                imageUrl = song.albumArtUrl
+            ))?.let { result += it }
+        }
+        return result
+    }
+
+    private suspend fun detectMarathonWeek(now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val weekKey = "W${LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yyyy-ww"))}"
+        val twoYearsAgo = now - 730L * 24 * 3600 * 1000
+        val weeks = eventDao.getWeeklyListeningTotalsSuspend(twoYearsAgo)
+        if (weeks.size < 2) return result
+
+        val currentWeekMs = weeks.lastOrNull()?.totalMs ?: return result
+        val previousMax = weeks.dropLast(1).maxOfOrNull { it.totalMs } ?: return result
+
+        if (currentWeekMs > previousMax) {
+            val sevenDaysAgo = now - 7L * 24 * 3600 * 1000
+            val songCount = eventDao.getTopSongsInPeriodByPlayCountSuspend(sevenDaysAgo, 999).size
+            val artistCount = eventDao.getUniqueArtistCountSinceSuspend(sevenDaysAgo)
+            val duration = formatDuration(currentWeekMs)
+            persistIfNew(Moment(
+                type = "MARATHON_WEEK",
+                entityKey = weekKey,
+                triggeredAt = now,
+                title = "Marathon week",
+                description = "New record: $duration this week",
+                statLines = listOf("$duration this week", "$songCount songs · $artistCount artists")
             ))?.let { result += it }
         }
         return result
