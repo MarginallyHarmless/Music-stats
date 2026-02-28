@@ -1,7 +1,6 @@
 package com.musicstats.app.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,10 +55,6 @@ fun MomentCard(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 180.dp)
-            .then(
-                if (isUnseen) Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, CardShape)
-                else Modifier
-            )
             .clip(CardShape)
             .clickable(onClick = onTap)
     ) {
@@ -136,12 +131,20 @@ fun MomentCard(
                 overflow = TextOverflow.Ellipsis
             )
             if (moment.statLine != null) {
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = moment.statLine,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Spacer(Modifier.height(6.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White.copy(alpha = 0.15f))
+                        .padding(horizontal = 10.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = moment.statLine,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
             Spacer(Modifier.height(6.dp))
             Row(

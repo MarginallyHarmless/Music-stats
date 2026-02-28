@@ -49,7 +49,7 @@ fun MomentsStrip(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             moments.take(3).forEach { moment ->
                 MomentCard(
