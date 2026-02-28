@@ -69,6 +69,23 @@ data class ArtistListeningEvent(
     val completed: Boolean
 )
 
+data class SongArtistEvent(
+    val songId: Long,
+    val artist: String,
+    val startedAt: Long,
+    val durationMs: Long
+)
+
+data class DayNightListening(
+    val day: String,
+    val nightMs: Long
+)
+
+data class WeeklyListening(
+    val weekKey: String,
+    val totalMs: Long
+)
+
 @Dao
 interface ListeningEventDao {
 
@@ -465,4 +482,166 @@ interface ListeningEventDao {
         ORDER BY day DESC
     """)
     suspend fun getDistinctDaysForSong(songId: Long, since: Long): List<String>
+
+    // Weekend listening total (Sat=6, Sun=0 in SQLite strftime %w)
+    @Query("""
+        SELECT COALESCE(SUM(durationMs), 0) FROM listening_events
+        WHERE completed = 1 AND startedAt >= :since
+        AND CAST(strftime('%w', startedAt / 1000, 'unixepoch', 'localtime') AS INTEGER) IN (0, 6)
+    """)
+    suspend fun getWeekendListeningMsSuspend(since: Long): Long
+
+    // Total listening ms since a timestamp (suspend version of the Flow getListeningTimeSince)
+    @Query("SELECT COALESCE(SUM(durationMs), 0) FROM listening_events WHERE startedAt >= :since AND completed = 1")
+    suspend fun getListeningTimeSinceSuspend(since: Long): Long
+
+    // Unique artist count in a period (for Wide Taste)
+    @Query("""
+        SELECT COUNT(DISTINCT s.artist) FROM listening_events e
+        JOIN songs s ON e.songId = s.id
+        WHERE e.completed = 1 AND e.startedAt >= :since
+    """)
+    suspend fun getUniqueArtistCountSinceSuspend(since: Long): Int
+
+    // Top N songs by play count in a time window (for Repeat Offender, Comfort Zone)
+    @Query("""
+        SELECT e.songId, s.title, s.artist, s.albumArtUrl,
+               COALESCE(SUM(e.durationMs), 0) AS totalDurationMs,
+               COUNT(CASE WHEN e.completed = 1 THEN 1 END) AS playCount
+        FROM listening_events e JOIN songs s ON e.songId = s.id
+        WHERE e.startedAt >= :since AND e.completed = 1
+        GROUP BY e.songId
+        ORDER BY playCount DESC
+        LIMIT :limit
+    """)
+    suspend fun getTopSongsInPeriodByPlayCountSuspend(since: Long, limit: Int): List<SongPlayStats>
+
+    // Total completed play count in a period (for Repeat Offender, Comfort Zone)
+    @Query("""
+        SELECT COUNT(*) FROM listening_events
+        WHERE completed = 1 AND startedAt >= :since
+    """)
+    suspend fun getTotalPlayCountInPeriodSuspend(since: Long): Long
+
+    // Ordered events for consecutive-run detection (for Album Listener)
+    @Query("""
+        SELECT e.songId, s.artist, e.startedAt, e.durationMs
+        FROM listening_events e JOIN songs s ON e.songId = s.id
+        WHERE e.completed = 1 AND e.startedAt >= :since
+        ORDER BY e.startedAt ASC
+    """)
+    suspend fun getOrderedSongArtistEventsSuspend(since: Long): List<SongArtistEvent>
+
+    // Last completed play timestamp for a song before a cutoff (for Resurrection)
+    @Query("""
+        SELECT MAX(startedAt) FROM listening_events
+        WHERE songId = :songId AND completed = 1 AND startedAt < :before
+    """)
+    suspend fun getSongLastPlayedBeforeSuspend(songId: Long, before: Long): Long?
+
+    // Night listening totals grouped by calendar day, hours 0-3 (for Night Binge)
+    @Query("""
+        SELECT strftime('%Y-%m-%d', startedAt / 1000, 'unixepoch', 'localtime') AS day,
+               COALESCE(SUM(durationMs), 0) AS nightMs
+        FROM listening_events
+        WHERE completed = 1 AND startedAt >= :since
+        AND CAST(strftime('%H', startedAt / 1000, 'unixepoch', 'localtime') AS INTEGER) < 4
+        GROUP BY day
+    """)
+    suspend fun getNightListeningByDaySuspend(since: Long): List<DayNightListening>
+
+    // Last completed play timestamp for an artist before a cutoff (for Rediscovery)
+    @Query("""
+        SELECT MAX(e.startedAt) FROM listening_events e
+        JOIN songs s ON e.songId = s.id
+        WHERE s.artist = :artist AND e.completed = 1 AND e.startedAt < :before
+    """)
+    suspend fun getArtistLastPlayedBeforeSuspend(artist: String, before: Long): Long?
+
+    // Artist play count in a time period (for Rediscovery, Breakup plays chip)
+    @Query("""
+        SELECT COUNT(*) FROM listening_events e
+        JOIN songs s ON e.songId = s.id
+        WHERE s.artist = :artist AND e.completed = 1 AND e.startedAt >= :since
+    """)
+    suspend fun getArtistPlayCountSinceSuspend(artist: String, since: Long): Int
+
+    // Song play count before a cutoff (for Slow Burn - plays before this week)
+    @Query("""
+        SELECT COUNT(*) FROM listening_events
+        WHERE songId = :songId AND completed = 1 AND startedAt < :before
+    """)
+    suspend fun getSongPlayCountBeforeSuspend(songId: Long, before: Long): Int
+
+    // Song play count since a timestamp (for Slow Burn - plays this week)
+    @Query("""
+        SELECT COUNT(*) FROM listening_events
+        WHERE songId = :songId AND completed = 1 AND startedAt >= :since
+    """)
+    suspend fun getSongPlayCountSinceSuspend(songId: Long, since: Long): Int
+
+    // Weekly listening totals (ISO week, for Marathon Week)
+    @Query("""
+        SELECT strftime('%Y-W%W', startedAt / 1000, 'unixepoch', 'localtime') AS weekKey,
+               COALESCE(SUM(durationMs), 0) AS totalMs
+        FROM listening_events
+        WHERE completed = 1 AND startedAt >= :since
+        GROUP BY weekKey
+        ORDER BY weekKey ASC
+    """)
+    suspend fun getWeeklyListeningTotalsSuspend(since: Long): List<WeeklyListening>
+
+    // Song rank by all-time play count (1 = most played)
+    @Query("""
+        SELECT COUNT(*) + 1 FROM (
+            SELECT songId, COUNT(*) AS playCount
+            FROM listening_events WHERE completed = 1
+            GROUP BY songId
+        ) WHERE playCount > (
+            SELECT COUNT(*) FROM listening_events
+            WHERE songId = :songId AND completed = 1
+        )
+    """)
+    suspend fun getSongRankByPlayCountSuspend(songId: Long): Int
+
+    // Unique song count for an artist (for Artist Hour Milestones chip)
+    @Query("""
+        SELECT COUNT(DISTINCT e.songId) FROM listening_events e
+        JOIN songs s ON e.songId = s.id
+        WHERE s.artist = :artist AND e.completed = 1
+    """)
+    suspend fun getUniqueSongCountForArtistSuspend(artist: String): Int
+
+    // Average daily listening in ms over a period (for Streak chips)
+    @Query("""
+        SELECT COALESCE(
+            SUM(durationMs) / NULLIF(COUNT(DISTINCT strftime('%Y-%m-%d', startedAt / 1000, 'unixepoch', 'localtime')), 0),
+            0
+        )
+        FROM listening_events
+        WHERE completed = 1 AND startedAt >= :since
+    """)
+    suspend fun getAvgDailyListeningMsSuspend(since: Long): Long
+
+    // Unique song count in a time period (for Streak and Total Hours chips)
+    @Query("""
+        SELECT COUNT(DISTINCT songId) FROM listening_events
+        WHERE completed = 1 AND startedAt >= :since
+    """)
+    suspend fun getUniqueSongCountInPeriodSuspend(since: Long): Int
+
+    // New songs discovered since a timestamp (for Explorer and Discovery Week chips)
+    @Query("""
+        SELECT COUNT(*) FROM songs WHERE firstHeardAt >= :since
+    """)
+    suspend fun getNewSongsSinceSuspend(since: Long): Int
+
+    // Count days in a period with commute-hour listening (for Commute Listener chip)
+    @Query("""
+        SELECT COUNT(DISTINCT strftime('%Y-%m-%d', startedAt / 1000, 'unixepoch', 'localtime'))
+        FROM listening_events
+        WHERE completed = 1 AND startedAt >= :since
+        AND CAST(strftime('%H', startedAt / 1000, 'unixepoch', 'localtime') AS INTEGER) IN (7, 8, 17, 18)
+    """)
+    suspend fun getCommuteDaysCountSuspend(since: Long): Int
 }
