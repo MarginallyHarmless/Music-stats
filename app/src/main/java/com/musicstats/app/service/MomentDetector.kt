@@ -65,9 +65,9 @@ class MomentDetector @Inject constructor(
         val result = mutableListOf<Moment>()
         val songs = eventDao.getSongsWithMinPlays(SONG_PLAY_THRESHOLDS.first())
         for (song in songs) {
+            val rank = eventDao.getSongRankByPlayCountSuspend(song.songId)
             for (threshold in SONG_PLAY_THRESHOLDS) {
                 if (song.playCount >= threshold) {
-                    val rank = eventDao.getSongRankByPlayCountSuspend(song.songId)
                     persistIfNew(Moment(
                         type = "SONG_PLAYS_$threshold",
                         entityKey = "${song.songId}:$threshold",
@@ -114,16 +114,17 @@ class MomentDetector @Inject constructor(
     private suspend fun detectStreakMilestones(): List<Moment> {
         val result = mutableListOf<Moment>()
         val streak = computeStreak()
+        val now = System.currentTimeMillis()
         for (threshold in STREAK_THRESHOLDS) {
             if (streak >= threshold) {
-                val since = System.currentTimeMillis() - threshold.toLong() * 86_400_000L
+                val since = now - threshold.toLong() * 86_400_000L
                 val avgMs = eventDao.getAvgDailyListeningMsSuspend(since)
                 val avgMins = avgMs / 60_000L
                 val uniqueSongs = eventDao.getUniqueSongCountInPeriodSuspend(since)
                 persistIfNew(Moment(
                     type = "STREAK_$threshold",
                     entityKey = "$threshold",
-                    triggeredAt = System.currentTimeMillis(),
+                    triggeredAt = now,
                     title = "$threshold-day streak",
                     description = "$threshold days in a row — you're on fire",
                     statLines = listOf("avg ${avgMins}min/day", "$uniqueSongs songs this streak")
