@@ -548,8 +548,10 @@ fun HomeScreen(
                     }
                 }) { bitmap ->
                     ShareCardRenderer.shareBitmap(context, bitmap)
+                    viewModel.markMomentShared(moment.id)
                 }
                 showMomentShareSheet = false
+                selectedMoment = null
             }
         }
 
