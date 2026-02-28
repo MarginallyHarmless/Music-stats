@@ -31,6 +31,8 @@ class MomentWorker @AssistedInject constructor(
             val newMoments = detector.detectAndPersistNewMoments()
             newMoments.forEach { fireNotification(it) }
             Result.success()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.retry()
         }
@@ -42,8 +44,9 @@ class MomentWorker @AssistedInject constructor(
         val intent = Intent(applicationContext, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
+        val notifId = (moment.id and 0x7FFFFFFFL).toInt()
         val pi = PendingIntent.getActivity(
-            applicationContext, moment.id.toInt(), intent,
+            applicationContext, notifId, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
@@ -54,7 +57,7 @@ class MomentWorker @AssistedInject constructor(
             .setAutoCancel(true)
             .setGroup(GROUP_KEY)
             .build()
-        nm.notify(moment.id.toInt(), notification)
+        nm.notify(notifId, notification)
     }
 
     private fun ensureChannel(nm: NotificationManager) {
