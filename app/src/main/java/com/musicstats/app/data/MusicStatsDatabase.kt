@@ -147,9 +147,28 @@ abstract class MusicStatsDatabase : RoomDatabase() {
 
         val MIGRATION_11_12 = object : Migration(11, 12) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE moments ADD COLUMN statLines TEXT NOT NULL DEFAULT '[]'")
-                // Clear all moments — they will be re-detected with proper statLines on next run
-                db.execSQL("DELETE FROM moments")
+                // Recreate moments table without the old statLine column and with the new statLines column.
+                // ALTER TABLE ... DROP COLUMN isn't supported on Android < 12, so we use the copy approach.
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS moments_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        type TEXT NOT NULL,
+                        entityKey TEXT NOT NULL,
+                        triggeredAt INTEGER NOT NULL,
+                        seenAt INTEGER,
+                        sharedAt INTEGER,
+                        title TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        songId INTEGER,
+                        artistId INTEGER,
+                        statLines TEXT NOT NULL DEFAULT '[]',
+                        imageUrl TEXT,
+                        entityName TEXT
+                    )
+                """)
+                db.execSQL("DROP TABLE moments")
+                db.execSQL("ALTER TABLE moments_new RENAME TO moments")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_moments_type_entityKey` ON `moments` (`type`, `entityKey`)")
             }
         }
     }
