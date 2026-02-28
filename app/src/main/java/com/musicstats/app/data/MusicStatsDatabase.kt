@@ -15,7 +15,7 @@ import com.musicstats.app.data.model.Song
 
 @Database(
     entities = [Song::class, Artist::class, ListeningEvent::class, Moment::class],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class MusicStatsDatabase : RoomDatabase() {
@@ -117,6 +117,13 @@ abstract class MusicStatsDatabase : RoomDatabase() {
         val MIGRATION_7_8 = object : Migration(7, 8) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE moments ADD COLUMN statLine TEXT DEFAULT NULL")
+            }
+        }
+
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Clear existing moments so they are re-detected with statLine populated
+                db.execSQL("DELETE FROM moments")
             }
         }
     }

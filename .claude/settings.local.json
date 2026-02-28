@@ -1,7 +1,36 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(gradle:*)",
+      "Bash(java:*)",
+      "Bash(curl:*)",
+      "Bash(chmod +x:*)",
+      "Bash(JAVA_HOME=\"/d/Android Studio/jbr\" ./gradlew:*)",
+      "Bash(JAVA_HOME=\"/d/Android Studio/jbr\" ANDROID_HOME=\"/c/Users/bogda/AppData/Local/Android/Sdk\" ./gradlew assembleDebug:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(pwd:*)",
+      "Bash(./gradlew assembleDebug:*)",
+      "Bash(echo:*)",
+      "Bash(unzip:*)",
+      "Bash(cp:*)",
+      "Bash(javap:*)",
+      "Bash(jar tf:*)",
+      "Bash(./gradlew assembleRelease:*)",
+      "Bash(./gradlew test:*)",
+      "Bash(./gradlew testDebugUnitTest:*)",
+      "Bash(./gradlew installDebug:*)",
+      "Bash(adb shell:*)",
+      "Bash(adb logcat:*)",
+      "Bash(sqlite3:*)",
+      "Bash(ls:*)",
+      "Bash(adb pull:*)",
+      "Bash(adb exec-out:*)",
+      "Bash(file:*)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(adb devices:*)",
+      "Bash(./gradlew compileDebugKotlin:*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }
