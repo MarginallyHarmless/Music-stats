@@ -58,11 +58,14 @@ object ShareCardRenderer {
             override fun onGlobalLayout() {
                 composeView.viewTreeObserver.removeOnGlobalLayoutListener(this)
 
-                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                val canvas = Canvas(bitmap)
-                composeView.draw(canvas)
-                decorView.removeView(composeView)
-                onBitmapReady(bitmap)
+                // Delay capture to let Coil finish loading images (typically from memory cache).
+                composeView.postDelayed({
+                    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                    val canvas = Canvas(bitmap)
+                    composeView.draw(canvas)
+                    decorView.removeView(composeView)
+                    onBitmapReady(bitmap)
+                }, 500)
             }
         })
     }

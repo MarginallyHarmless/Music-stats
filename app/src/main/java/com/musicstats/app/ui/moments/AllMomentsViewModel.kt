@@ -61,6 +61,10 @@ class AllMomentsViewModel @Inject constructor(
         val a0 = artists.getOrNull(0)
         val a1 = artists.getOrNull(1)
 
+        // Fallback art so every card that should have a background gets one
+        val songArt = s0?.albumArtUrl ?: s1?.albumArtUrl ?: s2?.albumArtUrl
+        val artistArt = a0?.imageUrl ?: a1?.imageUrl
+
         // ── Song Play Milestones (6) ──────────────────────────────
         listOf(10, 25, 50, 100, 250, 500).forEachIndexed { idx, threshold ->
             result += Moment(id = (-1L - idx), type = "SONG_PLAYS_$threshold", entityKey = "preview",
@@ -69,7 +73,7 @@ class AllMomentsViewModel @Inject constructor(
                 description = "You've played ${s0?.title ?: "Blinding Lights"} $threshold times",
                 songId = s0?.songId,
                 statLines = listOf("${formatDuration((threshold * 200_000L))} total", "#${idx + 1} all-time"),
-                imageUrl = s0?.albumArtUrl)
+                imageUrl = s0?.albumArtUrl ?: songArt)
         }
 
         // ── Artist Hour Milestones (4) ────────────────────────────
@@ -81,7 +85,7 @@ class AllMomentsViewModel @Inject constructor(
                 description = "You've spent $label listening to ${a0?.name ?: "The Weeknd"}",
                 entityName = a0?.name ?: "The Weeknd",
                 statLines = listOf("${hours * 120} plays", "${hours * 8} songs heard"),
-                imageUrl = a0?.imageUrl)
+                imageUrl = a0?.imageUrl ?: artistArt)
         }
 
         // ── Streak Milestones (5) ─────────────────────────────────
@@ -137,13 +141,13 @@ class AllMomentsViewModel @Inject constructor(
             description = "You've listened to ${s0?.title ?: "that song"} over 50 times",
             songId = s0?.songId,
             statLines = listOf("${s0?.playCount ?: 63} plays", "${formatDuration((s0?.totalDurationMs ?: 19_200_000L))} total"),
-            imageUrl = s0?.albumArtUrl)
+            imageUrl = s0?.albumArtUrl ?: songArt)
         result += Moment(id = -56, type = "ARCHETYPE_LOYAL_FAN", entityKey = "preview",
             triggeredAt = now, title = "Loyal Fan",
             description = "Over 50% of your listening is ${a0?.name ?: "that artist"}",
             entityName = a0?.name,
             statLines = listOf("54% of listening", "${a0?.playCount ?: 420} plays"),
-            imageUrl = a0?.imageUrl)
+            imageUrl = a0?.imageUrl ?: artistArt)
         result += Moment(id = -57, type = "ARCHETYPE_EXPLORER", entityKey = "preview",
             triggeredAt = now, title = "Explorer",
             description = "You discovered 12 new artists this week",
@@ -161,12 +165,12 @@ class AllMomentsViewModel @Inject constructor(
             description = "You found your songs. You're not letting go.",
             songId = s0?.songId,
             statLines = listOf("top 3 songs: 43% of plays", "${s0?.title ?: "that song"} × ${s0?.playCount ?: 28}"),
-            imageUrl = s0?.albumArtUrl)
+            imageUrl = s0?.albumArtUrl ?: songArt)
         result += Moment(id = -61, type = "ARCHETYPE_ALBUM_LISTENER", entityKey = "preview",
             triggeredAt = now, title = "Album Listener",
             description = "You don't shuffle. You commit.",
             statLines = listOf("7 album runs this month", "avg 9 songs per run"),
-            imageUrl = a0?.imageUrl)
+            imageUrl = a0?.imageUrl ?: artistArt)
 
         // ── Behavioral (13) ──────────────────────────────────────
         val dailyPlays = (s0?.playCount?.div(7))?.coerceAtLeast(5) ?: 8
@@ -176,28 +180,28 @@ class AllMomentsViewModel @Inject constructor(
             description = "You played ${s0?.title ?: "that song"} $dailyPlays times today. Are you okay?",
             songId = s0?.songId,
             statLines = listOf("$dailyPlays plays today", "${s0?.playCount ?: 312} all-time"),
-            imageUrl = s0?.albumArtUrl)
+            imageUrl = s0?.albumArtUrl ?: songArt)
         result += Moment(id = -71, type = "DAILY_RITUAL", entityKey = "preview",
             triggeredAt = now,
             title = "Daily ritual",
             description = "You've listened to ${s0?.title ?: "that song"} every day for 7 days",
             songId = s0?.songId,
             statLines = listOf("${s0?.playCount ?: 87} all-time plays", "${formatDuration(s0?.totalDurationMs ?: 18_000_000L)} total"),
-            imageUrl = s0?.albumArtUrl)
+            imageUrl = s0?.albumArtUrl ?: songArt)
         result += Moment(id = -72, type = "BREAKUP_CANDIDATE", entityKey = "preview",
             triggeredAt = now,
             title = "Maybe break up?",
             description = "You've skipped ${a1?.name ?: "that artist"} 12 times this week",
             entityName = a1?.name,
             statLines = listOf("12 skips this week", "3 plays this week"),
-            imageUrl = a1?.imageUrl)
+            imageUrl = a1?.imageUrl ?: artistArt)
         result += Moment(id = -73, type = "FAST_OBSESSION", entityKey = "preview",
             triggeredAt = now,
             title = "${s1?.playCount ?: 24} plays in 12 days",
             description = "${s1?.title ?: "that song"} came into your life 12 days ago. You've played it ${s1?.playCount ?: 24} times.",
             songId = s1?.songId,
             statLines = listOf("${s1?.playCount ?: 24} plays", "12 days · #3 all-time"),
-            imageUrl = s1?.albumArtUrl)
+            imageUrl = s1?.albumArtUrl ?: songArt)
         result += Moment(id = -74, type = "LONGEST_SESSION", entityKey = "preview",
             triggeredAt = now,
             title = "New record: 3h 12m",
@@ -209,7 +213,7 @@ class AllMomentsViewModel @Inject constructor(
             description = "You discovered ${s1?.title ?: "that song"} 5 days ago. It's already in your top 5.",
             songId = s1?.songId,
             statLines = listOf("#4 all-time", "5 days since discovered"),
-            imageUrl = s1?.albumArtUrl)
+            imageUrl = s1?.albumArtUrl ?: songArt)
         result += Moment(id = -76, type = "DISCOVERY_WEEK", entityKey = "preview",
             triggeredAt = now,
             title = "9 new artists",
@@ -221,7 +225,7 @@ class AllMomentsViewModel @Inject constructor(
             description = "${s2?.title ?: "that song"} went quiet for 45 days. Today it's all you're playing.",
             songId = s2?.songId,
             statLines = listOf("45 days away", "6 plays today"),
-            imageUrl = s2?.albumArtUrl)
+            imageUrl = s2?.albumArtUrl ?: songArt)
         result += Moment(id = -78, type = "NIGHT_BINGE", entityKey = "preview",
             triggeredAt = now,
             title = "Night binge",
@@ -233,21 +237,21 @@ class AllMomentsViewModel @Inject constructor(
             description = "Your top 5 songs made up 84% of your listening this week",
             songId = s0?.songId,
             statLines = listOf("84% from 5 songs", "62 plays this week"),
-            imageUrl = s0?.albumArtUrl)
+            imageUrl = s0?.albumArtUrl ?: songArt)
         result += Moment(id = -80, type = "REDISCOVERY", entityKey = "preview",
             triggeredAt = now,
             title = "You're back",
             description = "You hadn't played ${a1?.name ?: "that artist"} in 73 days. Welcome back.",
             entityName = a1?.name,
             statLines = listOf("73 days away", "8 plays this week"),
-            imageUrl = a1?.imageUrl)
+            imageUrl = a1?.imageUrl ?: artistArt)
         result += Moment(id = -81, type = "SLOW_BURN", entityKey = "preview",
             triggeredAt = now,
             title = "Slow burn",
             description = "${s2?.title ?: "that song"} has been in your library for 91 days. It just clicked.",
             songId = s2?.songId,
             statLines = listOf("91 days to click", "7 plays now"),
-            imageUrl = s2?.albumArtUrl)
+            imageUrl = s2?.albumArtUrl ?: songArt)
         result += Moment(id = -82, type = "MARATHON_WEEK", entityKey = "preview",
             triggeredAt = now,
             title = "Marathon week",

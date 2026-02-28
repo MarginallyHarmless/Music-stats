@@ -7,10 +7,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -55,7 +55,7 @@ fun MomentCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 180.dp)
+            .aspectRatio(1f)
             .clip(CardShape)
             .clickable(onClick = onTap)
     ) {
@@ -104,7 +104,7 @@ fun MomentCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomStart)
-                .padding(horizontal = 16.dp, vertical = 14.dp)
+                .padding(horizontal = 20.dp, vertical = 20.dp)
         ) {
             if (moment.entityName != null) {
                 Text(
@@ -114,32 +114,33 @@ fun MomentCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(4.dp))
             }
             Text(
                 text = moment.title,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            Spacer(Modifier.height(4.dp))
             Text(
                 text = moment.description,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.70f),
-                maxLines = 2,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
             if (moment.statLines.isNotEmpty()) {
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     moment.statLines.forEach { stat ->
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(50))
                                 .background(Color.White.copy(alpha = 0.15f))
-                                .padding(horizontal = 10.dp, vertical = 3.dp)
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Text(
                                 text = stat,
@@ -151,7 +152,7 @@ fun MomentCard(
                     }
                 }
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -179,4 +180,4 @@ fun MomentCard(
  * Returns a local drawable resource ID for the given moment type, or null if none is
  * configured yet. Add entries here when custom background images are provided.
  */
-private fun momentBackgroundDrawable(type: String): Int? = null
+internal fun momentBackgroundDrawable(type: String): Int? = null

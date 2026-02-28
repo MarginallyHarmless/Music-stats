@@ -18,7 +18,7 @@ import com.musicstats.app.data.model.Song
 @TypeConverters(Converters::class)
 @Database(
     entities = [Song::class, Artist::class, ListeningEvent::class, Moment::class],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 abstract class MusicStatsDatabase : RoomDatabase() {
@@ -169,6 +169,16 @@ abstract class MusicStatsDatabase : RoomDatabase() {
                 db.execSQL("DROP TABLE moments")
                 db.execSQL("ALTER TABLE moments_new RENAME TO moments")
                 db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_moments_type_entityKey` ON `moments` (`type`, `entityKey`)")
+            }
+        }
+
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Clear content:// URIs — they belong to other apps and aren't accessible.
+                // Songs will get proper artwork on their next play via bitmap save.
+                db.execSQL("UPDATE songs SET albumArtUrl = NULL WHERE albumArtUrl LIKE 'content://%'")
+                // Re-detect moments so they pick up corrected imageUrls
+                db.execSQL("DELETE FROM moments")
             }
         }
     }

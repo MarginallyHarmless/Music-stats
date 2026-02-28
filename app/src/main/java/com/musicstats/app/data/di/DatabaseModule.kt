@@ -40,6 +40,7 @@ object DatabaseModule {
                 MusicStatsDatabase.MIGRATION_9_10,
                 MusicStatsDatabase.MIGRATION_10_11,
                 MusicStatsDatabase.MIGRATION_11_12,
+                MusicStatsDatabase.MIGRATION_12_13,
             )
             .build()
     }

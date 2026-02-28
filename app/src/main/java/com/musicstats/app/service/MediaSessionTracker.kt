@@ -169,16 +169,17 @@ class MediaSessionTracker @Inject constructor(
             val mediaDuration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
             currentMediaDurationMs = if (mediaDuration > 0) mediaDuration else null
 
-            // Extract album art: prefer URI, fall back to bitmap
+            // Extract album art: prefer public http(s) URI, fall back to bitmap.
+            // content:// URIs from other apps (e.g. Apple Music) aren't accessible to us,
+            // so skip them and save the bitmap file instead.
             try {
-                currentAlbumArtUri = metadata.getString(MediaMetadata.METADATA_KEY_ALBUM_ART_URI)
+                val rawUri = metadata.getString(MediaMetadata.METADATA_KEY_ALBUM_ART_URI)
                     ?: metadata.getString(MediaMetadata.METADATA_KEY_ART_URI)
                     ?: metadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_ICON_URI)
-                currentAlbumArtBitmap = if (currentAlbumArtUri == null) {
-                    metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
-                        ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_ART)
-                        ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
-                } else null
+                currentAlbumArtUri = rawUri?.takeIf { it.startsWith("http") }
+                currentAlbumArtBitmap = metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
+                    ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_ART)
+                    ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
             } catch (_: Exception) {
                 currentAlbumArtUri = null
                 currentAlbumArtBitmap = null

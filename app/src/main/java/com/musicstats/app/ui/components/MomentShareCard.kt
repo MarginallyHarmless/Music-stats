@@ -4,19 +4,23 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -26,11 +30,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.allowHardware
+import coil3.size.Size
 import com.musicstats.app.data.model.Moment
+import com.musicstats.app.ui.theme.LocalAlbumPalette
+import java.util.Locale
 
 /**
  * A 360×640dp shareable card for a Moment.
- * Uses album art palette colors when available, otherwise themed gradients per archetype.
+ * Matches the in-app MomentCard look: full-bleed image, scrim, bottom-anchored text with pill chips.
  */
 @Composable
 fun MomentShareCard(
@@ -39,114 +48,147 @@ fun MomentShareCard(
     darkMutedColor: Color? = null,
     imageUrl: String? = null
 ) {
-    val isArchetype = moment.type.startsWith("ARCHETYPE_")
-
-    val (gradientStart, gradientEnd) = if (dominantColor != null && darkMutedColor != null) {
-        dominantColor to darkMutedColor
-    } else {
-        archetypeGradient(moment.type)
+    val palette = LocalAlbumPalette.current
+    val dateStr = remember(moment.triggeredAt) {
+        java.time.Instant.ofEpochMilli(moment.triggeredAt)
+            .atZone(java.time.ZoneId.systemDefault())
+            .toLocalDate()
+            .format(java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault()))
     }
+    val backgroundModel: Any? = imageUrl ?: moment.imageUrl ?: momentBackgroundDrawable(moment.type)
 
     Box(
         modifier = Modifier
             .width(360.dp)
             .height(640.dp)
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(gradientStart, gradientEnd),
-                    start = Offset.Zero,
-                    end = Offset(360f * 2, 640f * 2)
-                )
-            )
-            .padding(32.dp)
+            .clip(RoundedCornerShape(20.dp))
     ) {
-        // Album art or artist image — top right (only for non-archetype cards)
-        if (!isArchetype && imageUrl != null) {
+        // Layer 1: image or dark placeholder
+        // allowHardware(false) is required because ShareCardRenderer draws to a software Canvas
+        if (backgroundModel != null) {
+            val imgContext = androidx.compose.ui.platform.LocalContext.current
+            val softwareModel = remember(backgroundModel) {
+                ImageRequest.Builder(imgContext)
+                    .data(backgroundModel)
+                    .allowHardware(false)
+                    .size(Size.ORIGINAL)
+                    .build()
+            }
             AsyncImage(
-                model = imageUrl,
+                model = softwareModel,
                 contentDescription = null,
+                contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .align(Alignment.TopEnd),
-                contentScale = ContentScale.Crop
+                    .fillMaxSize()
+                    .blur(20.dp)
+                    .drawWithContent {
+                        drawContent()
+                        // Darken the blurred image so it reads as ambient backdrop
+                        drawRect(Color.Black.copy(alpha = 0.30f))
+                    }
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF1A1A28))
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                palette.accent.copy(alpha = 0.25f),
+                                Color.Transparent
+                            ),
+                            center = Offset(0f, 0f),
+                            radius = 900f
+                        )
+                    )
             )
         }
 
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Spacer(Modifier.height(8.dp))
-
-            // Hero section
-            Column {
-                if (isArchetype) {
-                    Text(
-                        text = archetypeEmoji(moment.type),
-                        fontSize = 72.sp,
-                        modifier = Modifier.padding(bottom = 16.dp)
+        // Layer 2: scrim
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.75f)
+                        )
                     )
-                }
-                Text(
-                    text = moment.title,
-                    style = MaterialTheme.typography.displayMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White,
-                    lineHeight = 52.sp
                 )
-                Spacer(Modifier.height(12.dp))
+        )
+
+        // Layer 3: text anchored to bottom
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomStart)
+                .padding(horizontal = 28.dp, vertical = 32.dp)
+        ) {
+            if (moment.entityName != null) {
                 Text(
-                    text = moment.description,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White.copy(alpha = 0.85f),
-                    maxLines = 3,
+                    text = moment.entityName,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Color.White.copy(alpha = 0.65f),
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (moment.statLines.isNotEmpty()) {
-                    Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(4.dp))
+            }
+            Text(
+                text = moment.title,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = moment.description,
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White.copy(alpha = 0.70f),
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (moment.statLines.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     moment.statLines.forEach { stat ->
-                        Text(
-                            text = stat,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(Color.White.copy(alpha = 0.15f))
+                                .padding(horizontal = 14.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = stat,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
             }
-
-            // Watermark
-            Text(
-                text = "vibes",
-                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 2.sp),
-                color = Color.White.copy(alpha = 0.35f),
-                modifier = Modifier.align(Alignment.End)
-            )
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = dateStr,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.40f)
+                )
+                Text(
+                    text = "vibes",
+                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 2.sp),
+                    color = Color.White.copy(alpha = 0.35f)
+                )
+            }
         }
     }
-}
-
-private fun archetypeGradient(type: String): Pair<Color, Color> = when {
-    type.contains("NIGHT_OWL") -> Color(0xFF1A1A2E) to Color(0xFF16213E)
-    type.contains("MORNING") -> Color(0xFFFF6B35) to Color(0xFFFF8C42)
-    type.contains("COMMUTE") -> Color(0xFF2D6A4F) to Color(0xFF1B4332)
-    type.contains("COMPLETIONIST") -> Color(0xFF6B2D8B) to Color(0xFF4A1E6E)
-    type.contains("SKIPPER") -> Color(0xFFD62828) to Color(0xFF9B1B1B)
-    type.contains("DEEP_CUT") -> Color(0xFF0D3B66) to Color(0xFF051E3E)
-    type.contains("LOYAL_FAN") -> Color(0xFFE63946) to Color(0xFFA4262E)
-    type.contains("EXPLORER") -> Color(0xFF2B9348) to Color(0xFF1A5C2A)
-    else -> Color(0xFF333333) to Color(0xFF111111)
-}
-
-private fun archetypeEmoji(type: String): String = when {
-    type.contains("NIGHT_OWL") -> "🌙"
-    type.contains("MORNING") -> "☀️"
-    type.contains("COMMUTE") -> "🎧"
-    type.contains("COMPLETIONIST") -> "✅"
-    type.contains("SKIPPER") -> "⏭️"
-    type.contains("DEEP_CUT") -> "💿"
-    type.contains("LOYAL_FAN") -> "❤️"
-    type.contains("EXPLORER") -> "🧭"
-    else -> "🎵"
 }
