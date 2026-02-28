@@ -27,10 +27,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import com.musicstats.app.data.model.Moment
 
 @Composable
@@ -116,7 +118,17 @@ private fun MomentFeedCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                if (isArchetype) {
+                val imageShape = if (moment.artistId != null) CircleShape else RoundedCornerShape(4.dp)
+                if (moment.imageUrl != null) {
+                    AsyncImage(
+                        model = moment.imageUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(imageShape)
+                    )
+                } else if (isArchetype) {
                     Text(archetypeEmojiSmall(moment.type), fontSize = 20.sp)
                 } else {
                     Spacer(Modifier.size(20.dp))
