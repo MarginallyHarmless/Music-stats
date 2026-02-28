@@ -87,4 +87,41 @@ class MomentDaoTest {
         assertEquals(true, dao.existsByTypeAndKey("STREAK_7", "7"))
         assertEquals(false, dao.existsByTypeAndKey("STREAK_7", "14"))
     }
+
+    @Test
+    fun markSharedUpdatesTimestamp() = runTest {
+        dao.insert(Moment(type = "A", entityKey = "1", triggeredAt = 1000L,
+            title = "T", description = "D"))
+        val id = dao.getAllMoments().first()[0].id
+        dao.markShared(id, 8888L)
+        val moment = dao.getAllMoments().first()[0]
+        assertNotNull(moment.sharedAt)
+        assertEquals(8888L, moment.sharedAt)
+    }
+
+    @Test
+    fun getRecentMomentsRespectsLimit() = runTest {
+        repeat(5) { i ->
+            dao.insert(Moment(type = "TYPE_$i", entityKey = "$i", triggeredAt = i * 1000L,
+                title = "T", description = "D"))
+        }
+        val recent = dao.getRecentMoments(3).first()
+        assertEquals(3, recent.size)
+        // Should be ordered newest first
+        assertEquals(4000L, recent[0].triggeredAt)
+        assertEquals(3000L, recent[1].triggeredAt)
+        assertEquals(2000L, recent[2].triggeredAt)
+    }
+
+    @Test
+    fun getUnseenCountTracksUnseenMoments() = runTest {
+        dao.insert(Moment(type = "A", entityKey = "1", triggeredAt = 1000L,
+            title = "T", description = "D"))
+        dao.insert(Moment(type = "B", entityKey = "2", triggeredAt = 2000L,
+            title = "T", description = "D"))
+        assertEquals(2, dao.getUnseenCount().first())
+        val id = dao.getAllMoments().first()[0].id
+        dao.markSeen(id, 9999L)
+        assertEquals(1, dao.getUnseenCount().first())
+    }
 }
