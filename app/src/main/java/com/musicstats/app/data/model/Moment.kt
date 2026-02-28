@@ -20,5 +20,6 @@ data class Moment(
     val songId: Long? = null,     // for album art + palette colors (nullable)
     val artistId: Long? = null,   // for artist image (nullable)
     val statLine: String? = null,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    val entityName: String? = null
 )

@@ -15,7 +15,7 @@ import com.musicstats.app.data.model.Song
 
 @Database(
     entities = [Song::class, Artist::class, ListeningEvent::class, Moment::class],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class MusicStatsDatabase : RoomDatabase() {
@@ -131,6 +131,13 @@ abstract class MusicStatsDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE moments ADD COLUMN imageUrl TEXT DEFAULT NULL")
                 // Clear so moments are re-detected with imageUrl populated
+                db.execSQL("DELETE FROM moments")
+            }
+        }
+
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE moments ADD COLUMN entityName TEXT DEFAULT NULL")
                 db.execSQL("DELETE FROM moments")
             }
         }
