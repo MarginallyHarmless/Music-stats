@@ -178,15 +178,44 @@ private fun MomentListCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            val imageShape = if (moment.artistId != null) CircleShape else RoundedCornerShape(6.dp)
-            if (moment.imageUrl != null) {
+            if (moment.artistId != null && moment.imageUrl != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AsyncImage(
+                        model = moment.imageUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.size(40.dp).clip(CircleShape)
+                    )
+                    Column {
+                        Text(
+                            text = moment.entityName ?: "",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (moment.statLine != null) {
+                            Text(
+                                text = moment.statLine,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            } else if (moment.imageUrl != null) {
                 AsyncImage(
                     model = moment.imageUrl,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .size(48.dp)
-                        .clip(imageShape)
+                        .clip(RoundedCornerShape(6.dp))
                 )
             } else if (isArchetype) {
                 Text(archetypeEmoji(moment.type), fontSize = 28.sp)
