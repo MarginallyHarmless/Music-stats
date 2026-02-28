@@ -15,7 +15,7 @@ import com.musicstats.app.data.model.Song
 
 @Database(
     entities = [Song::class, Artist::class, ListeningEvent::class, Moment::class],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class MusicStatsDatabase : RoomDatabase() {
@@ -111,6 +111,12 @@ abstract class MusicStatsDatabase : RoomDatabase() {
                 db.execSQL(
                     "CREATE UNIQUE INDEX IF NOT EXISTS `index_moments_type_entityKey` ON `moments` (`type`, `entityKey`)"
                 )
+            }
+        }
+
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE moments ADD COLUMN statLine TEXT DEFAULT NULL")
             }
         }
     }
