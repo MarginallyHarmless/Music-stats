@@ -628,13 +628,13 @@ class MomentDetector @Inject constructor(
     private suspend fun detectRediscovery(sevenDaysAgo: Long, now: Long): List<Moment> {
         val result = mutableListOf<Moment>()
         val weekKey = "W${LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yyyy-ww"))}"
-        val topArtistsThisWeek = eventDao.getTopArtistsByDurationSuspend(sevenDaysAgo, 5)
+        val topArtistsThisWeek = eventDao.getTopArtistsByDurationSuspend(sevenDaysAgo, 1)
 
         for (artistStats in topArtistsThisWeek) {
             val playsThisWeek = eventDao.getArtistPlayCountSinceSuspend(artistStats.artist, sevenDaysAgo)
             if (playsThisWeek < 5) continue
             val lastPlayedBefore = eventDao.getArtistLastPlayedBeforeSuspend(artistStats.artist, sevenDaysAgo) ?: continue
-            val gapDays = (sevenDaysAgo - lastPlayedBefore) / 86_400_000L
+            val gapDays = (now - lastPlayedBefore) / 86_400_000L
             if (gapDays >= 60) {
                 val artistEntity = artistDao.findByName(artistStats.artist)
                 persistIfNew(Moment(
