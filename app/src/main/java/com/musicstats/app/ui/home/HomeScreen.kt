@@ -549,7 +549,7 @@ fun HomeScreen(
                         val h = (640 * density).toInt()
                         ShareCardRenderer.renderComposable(context, w, h, {
                             MusicStatsTheme {
-                                MomentShareCard(moment = moment)
+                                MomentShareCard(moment = moment, imageUrl = moment.imageUrl)
                             }
                         }) { bitmap ->
                             ShareCardRenderer.shareBitmap(context, bitmap)
