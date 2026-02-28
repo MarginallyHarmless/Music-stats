@@ -56,10 +56,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import coil3.compose.AsyncImage
+import com.musicstats.app.data.model.Moment
 import com.musicstats.app.service.MusicNotificationListener
 import com.musicstats.app.ui.components.AuroraBackground
 import com.musicstats.app.ui.components.GradientCard
 import com.musicstats.app.ui.components.ListeningTimeChart
+import com.musicstats.app.ui.components.MomentShareCard
 import com.musicstats.app.ui.components.SectionHeader
 import com.musicstats.app.ui.components.StatCard
 import com.musicstats.app.ui.share.DailyRecapCard
@@ -105,6 +107,8 @@ fun HomeScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     var listenerEnabled by remember { mutableStateOf(isNotificationListenerEnabled(context)) }
     var showShareSheet by remember { mutableStateOf(false) }
+    var selectedMoment by remember { mutableStateOf<Moment?>(null) }
+    var showMomentShareSheet by remember { mutableStateOf(false) }
 
     androidx.compose.runtime.LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -391,7 +395,18 @@ fun HomeScreen(
             }
         }
 
-        // 6. Weekly chart section
+        // 6. Moments strip
+        MomentsStrip(
+            moments = recentMoments,
+            onMomentTap = { moment ->
+                viewModel.markMomentSeen(moment.id)
+                selectedMoment = moment
+                showMomentShareSheet = true
+            },
+            onSeeAll = { /* TODO: future - navigate to full moments list */ }
+        )
+
+        // 7. Weekly chart section
         SectionHeader("This Week")
         ListeningTimeChart(
             dailyData = weeklyData,
@@ -400,7 +415,7 @@ fun HomeScreen(
                 .height(200.dp)
         )
 
-        // 7. Top songs this week
+        // 8. Top songs this week
         SectionHeader("Top Songs This Week")
 
         if (topSongs.isEmpty()) {
@@ -488,7 +503,7 @@ fun HomeScreen(
             }
         }
 
-        // 8. Share FAB
+        // 9. Share FAB
         FloatingActionButton(
             onClick = { showShareSheet = true },
             modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -522,7 +537,23 @@ fun HomeScreen(
             )
         }
 
-        // 9. Bottom spacer
+        if (showMomentShareSheet) {
+            selectedMoment?.let { moment ->
+                val density = context.resources.displayMetrics.density
+                val w = (360 * density).toInt()
+                val h = (640 * density).toInt()
+                ShareCardRenderer.renderComposable(context, w, h, {
+                    MusicStatsTheme {
+                        MomentShareCard(moment = moment)
+                    }
+                }) { bitmap ->
+                    ShareCardRenderer.shareBitmap(context, bitmap)
+                }
+                showMomentShareSheet = false
+            }
+        }
+
+        // 10. Bottom spacer
         Spacer(Modifier.height(16.dp))
     }
     }
