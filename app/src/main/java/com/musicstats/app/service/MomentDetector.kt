@@ -67,6 +67,7 @@ class MomentDetector @Inject constructor(
         for (song in songs) {
             for (threshold in SONG_PLAY_THRESHOLDS) {
                 if (song.playCount >= threshold) {
+                    val rank = eventDao.getSongRankByPlayCountSuspend(song.songId)
                     persistIfNew(Moment(
                         type = "SONG_PLAYS_$threshold",
                         entityKey = "${song.songId}:$threshold",
@@ -74,7 +75,7 @@ class MomentDetector @Inject constructor(
                         title = "$threshold plays",
                         description = "You've played ${song.title} $threshold times",
                         songId = song.songId,
-                        statLines = listOf("${formatDuration(song.totalDurationMs)} total"),
+                        statLines = listOf("${formatDuration(song.totalDurationMs)} total", "#$rank all-time"),
                         imageUrl = song.albumArtUrl
                     ))?.let { result += it }
                 }
@@ -92,6 +93,7 @@ class MomentDetector @Inject constructor(
                 if (artist.totalDurationMs >= thresholdMs) {
                     val hours = thresholdMs / 3_600_000L
                     val humanHours = if (hours == 1L) "1 hour" else "$hours hours"
+                    val uniqueSongs = eventDao.getUniqueSongCountForArtistSuspend(artist.artist)
                     persistIfNew(Moment(
                         type = "ARTIST_HOURS_$hours",
                         entityKey = "${artist.artist}:$hours",
@@ -99,7 +101,7 @@ class MomentDetector @Inject constructor(
                         title = "$humanHours of ${artist.artist}",
                         description = "You've spent $humanHours listening to ${artist.artist}",
                         artistId = artistEntity?.id,
-                        statLines = listOf("${artist.playCount} total plays"),
+                        statLines = listOf("${artist.playCount} plays", "$uniqueSongs songs heard"),
                         imageUrl = artistEntity?.imageUrl,
                         entityName = artist.artist
                     ))?.let { result += it }
@@ -114,12 +116,17 @@ class MomentDetector @Inject constructor(
         val streak = computeStreak()
         for (threshold in STREAK_THRESHOLDS) {
             if (streak >= threshold) {
+                val since = System.currentTimeMillis() - threshold.toLong() * 86_400_000L
+                val avgMs = eventDao.getAvgDailyListeningMsSuspend(since)
+                val avgMins = avgMs / 60_000L
+                val uniqueSongs = eventDao.getUniqueSongCountInPeriodSuspend(since)
                 persistIfNew(Moment(
                     type = "STREAK_$threshold",
                     entityKey = "$threshold",
                     triggeredAt = System.currentTimeMillis(),
                     title = "$threshold-day streak",
-                    description = "$threshold days in a row — you're on fire"
+                    description = "$threshold days in a row — you're on fire",
+                    statLines = listOf("avg ${avgMins}min/day", "$uniqueSongs songs this streak")
                 ))?.let { result += it }
             }
         }
@@ -129,6 +136,8 @@ class MomentDetector @Inject constructor(
     private suspend fun detectTotalHourMilestones(now: Long): List<Moment> {
         val result = mutableListOf<Moment>()
         val totalMs = eventDao.getTotalListeningTimeMsSuspend()
+        val uniqueSongs = eventDao.getUniqueSongCountSuspend()
+        val uniqueArtists = eventDao.getUniqueArtistCountSuspend()
         for (thresholdMs in TOTAL_HOUR_THRESHOLDS_MS) {
             if (totalMs >= thresholdMs) {
                 val hours = thresholdMs / 3_600_000L
@@ -137,7 +146,8 @@ class MomentDetector @Inject constructor(
                     entityKey = "$hours",
                     triggeredAt = now,
                     title = "$hours hours",
-                    description = "You've listened to ${hours}h of music in total"
+                    description = "You've listened to ${hours}h of music in total",
+                    statLines = listOf("$uniqueSongs unique songs", "$uniqueArtists artists")
                 ))?.let { result += it }
             }
         }
@@ -147,6 +157,9 @@ class MomentDetector @Inject constructor(
     private suspend fun detectDiscoveryMilestones(): List<Moment> {
         val result = mutableListOf<Moment>()
         val uniqueSongs = eventDao.getUniqueSongCountSuspend()
+        val uniqueArtists = eventDao.getUniqueArtistCountSuspend()
+        val totalMs = eventDao.getTotalListeningTimeMsSuspend()
+        val totalHours = totalMs / 3_600_000L
         for (threshold in DISCOVERY_THRESHOLDS) {
             if (uniqueSongs >= threshold) {
                 persistIfNew(Moment(
@@ -154,7 +167,8 @@ class MomentDetector @Inject constructor(
                     entityKey = "$threshold",
                     triggeredAt = System.currentTimeMillis(),
                     title = "$threshold songs",
-                    description = "You've discovered $threshold unique songs"
+                    description = "You've discovered $threshold unique songs",
+                    statLines = listOf("from $uniqueArtists artists", "${totalHours}h of music")
                 ))?.let { result += it }
             }
         }
@@ -175,30 +189,39 @@ class MomentDetector @Inject constructor(
 
         if (nightMs.toDouble() / totalMs > 0.5) {
             val nightPct = (nightMs * 100 / totalMs).toInt()
+            val peakNightHour = hourly.filter { it.hour in listOf(22, 23, 0, 1, 2, 3) }
+                .maxByOrNull { it.totalDurationMs }?.hour ?: 23
+            val peakLabel = when (peakNightHour) {
+                0 -> "midnight"; 1 -> "1am"; 2 -> "2am"; 3 -> "3am"
+                22 -> "10pm"; 23 -> "11pm"; else -> "${peakNightHour}pm"
+            }
             persistIfNew(Moment(
                 type = "ARCHETYPE_NIGHT_OWL", entityKey = yearMonth, triggeredAt = now,
                 title = "Night Owl",
                 description = "You do most of your listening after 10pm",
-                statLines = listOf("$nightPct% of your listening")
+                statLines = listOf("$nightPct% of your listening", "peak: $peakLabel")
             ))?.let { result += it }
         }
         if (morningMs.toDouble() / totalMs > 0.5) {
             val morningPct = (morningMs * 100 / totalMs).toInt()
+            val peakMorningHour = hourly.filter { it.hour in 5..8 }
+                .maxByOrNull { it.totalDurationMs }?.hour ?: 7
             persistIfNew(Moment(
                 type = "ARCHETYPE_MORNING_LISTENER", entityKey = yearMonth, triggeredAt = now,
                 title = "Morning Listener",
                 description = "You do most of your listening before 9am",
-                statLines = listOf("$morningPct% of your listening")
+                statLines = listOf("$morningPct% of your listening", "peak: ${peakMorningHour}am")
             ))?.let { result += it }
         }
         if (totalMs > 1L && commuteAmMs > 0 && commutePmMs > 0 &&
             (commuteAmMs + commutePmMs).toDouble() / totalMs > 0.3) {
             val commutePct = ((commuteAmMs + commutePmMs) * 100 / totalMs).toInt()
+            val commuteDays = eventDao.getCommuteDaysCountSuspend(since)
             persistIfNew(Moment(
                 type = "ARCHETYPE_COMMUTE_LISTENER", entityKey = yearMonth, triggeredAt = now,
                 title = "Commute Listener",
                 description = "Your listening peaks at 7–9am and 5–7pm",
-                statLines = listOf("$commutePct% during commute hours")
+                statLines = listOf("$commutePct% during commute hours", "$commuteDays days this month")
             ))?.let { result += it }
         }
 
@@ -211,7 +234,7 @@ class MomentDetector @Inject constructor(
                 type = "ARCHETYPE_COMPLETIONIST", entityKey = yearMonth, triggeredAt = now,
                 title = "Completionist",
                 description = "You skip less than 5% of songs — truly dedicated",
-                statLines = listOf("${skipPct}% skip rate")
+                statLines = listOf("${skipPct}% skip rate", "$totalPlays plays")
             ))?.let { result += it }
         }
         if (skipRate > 0.40) {
@@ -220,17 +243,21 @@ class MomentDetector @Inject constructor(
                 type = "ARCHETYPE_CERTIFIED_SKIPPER", entityKey = yearMonth, triggeredAt = now,
                 title = "Certified Skipper",
                 description = "You skip more than 40% of songs. Nothing is good enough.",
-                statLines = listOf("${skipPct}% skip rate")
+                statLines = listOf("${skipPct}% skip rate", "$totalSkips skips")
             ))?.let { result += it }
         }
 
         val deepCuts = eventDao.getSongsWithMinPlays(50)
         if (deepCuts.isNotEmpty()) {
+            val deepCutMs = deepCuts[0].totalDurationMs
+            val deepCutHours = deepCutMs / 3_600_000L
+            val deepCutMins = (deepCutMs % 3_600_000L) / 60_000L
+            val deepCutDuration = if (deepCutHours > 0) "${deepCutHours}h ${deepCutMins}m" else "${deepCutMins}m"
             persistIfNew(Moment(
                 type = "ARCHETYPE_DEEP_CUT_DIGGER", entityKey = yearMonth, triggeredAt = now,
                 title = "Deep Cut Digger",
                 description = "You've listened to ${deepCuts[0].title} over 50 times",
-                statLines = listOf("${deepCuts[0].playCount} plays"),
+                statLines = listOf("${deepCuts[0].playCount} plays", "$deepCutDuration total"),
                 imageUrl = deepCuts[0].albumArtUrl
             ))?.let { result += it }
         }
@@ -247,7 +274,7 @@ class MomentDetector @Inject constructor(
                     title = "Loyal Fan",
                     description = "Over 50% of your listening is ${topArtists[0].artist}",
                     artistId = artistEntity?.id,
-                    statLines = listOf("$topPct% · ${topArtists[0].playCount} plays"),
+                    statLines = listOf("$topPct% of listening", "${topArtists[0].playCount} plays"),
                     imageUrl = artistEntity?.imageUrl,
                     entityName = topArtists[0].artist
                 ))?.let { result += it }
@@ -256,10 +283,12 @@ class MomentDetector @Inject constructor(
 
         val newArtistsThisWeek = eventDao.getNewArtistsSinceSuspend(now - 7L * 24 * 3600 * 1000)
         if (newArtistsThisWeek >= 5) {
+            val newSongsThisWeek = eventDao.getNewSongsSinceSuspend(now - 7L * 24 * 3600 * 1000)
             persistIfNew(Moment(
                 type = "ARCHETYPE_EXPLORER", entityKey = yearMonth, triggeredAt = now,
                 title = "Explorer",
-                description = "You discovered $newArtistsThisWeek new artists this week"
+                description = "You discovered $newArtistsThisWeek new artists this week",
+                statLines = listOf("$newArtistsThisWeek new artists", "$newSongsThisWeek new songs")
             ))?.let { result += it }
         }
 
@@ -273,6 +302,7 @@ class MomentDetector @Inject constructor(
         val todayDate = LocalDate.now(ZoneId.systemDefault()).toString()
         for (song in todaySongs) {
             if (song.playCount >= 5) {
+                val allTimePlays = eventDao.getSongPlayCountSinceSuspend(song.songId, 0L)
                 persistIfNew(Moment(
                     type = "OBSESSION_DAILY",
                     entityKey = "${song.songId}:$todayDate",
@@ -280,6 +310,7 @@ class MomentDetector @Inject constructor(
                     title = "${song.playCount}x in one day",
                     description = "You played ${song.title} ${song.playCount} times today. Are you okay?",
                     songId = song.songId,
+                    statLines = listOf("${song.playCount} plays today", "$allTimePlays all-time"),
                     imageUrl = song.albumArtUrl
                 ))?.let { result += it }
             }
@@ -304,6 +335,7 @@ class MomentDetector @Inject constructor(
                     title = "Daily ritual",
                     description = "You've listened to ${song.title} every day for 7 days",
                     songId = song.songId,
+                    statLines = listOf("${song.playCount} all-time plays", "${formatDuration(song.totalDurationMs)} total"),
                     imageUrl = song.albumArtUrl
                 ))?.let { result += it }
             }
@@ -319,6 +351,7 @@ class MomentDetector @Inject constructor(
             val skipCount = eventDao.getArtistSkipCountSince(artistStats.artist, sevenDaysAgo)
             if (skipCount >= 10) {
                 val artistEntity = artistDao.findByName(artistStats.artist)
+                val playsThisWeek = eventDao.getArtistPlayCountSinceSuspend(artistStats.artist, sevenDaysAgo)
                 persistIfNew(Moment(
                     type = "BREAKUP_CANDIDATE",
                     entityKey = "${artistStats.artist}:$weekKey",
@@ -326,7 +359,7 @@ class MomentDetector @Inject constructor(
                     title = "Maybe break up?",
                     description = "You've skipped ${artistStats.artist} $skipCount times this week",
                     artistId = artistEntity?.id,
-                    statLines = listOf("$skipCount skips this week"),
+                    statLines = listOf("$skipCount skips this week", "$playsThisWeek plays this week"),
                     imageUrl = artistEntity?.imageUrl,
                     entityName = artistStats.artist
                 ))?.let { result += it }
@@ -342,6 +375,7 @@ class MomentDetector @Inject constructor(
             val ageMs = now - song.firstHeardAt
             if (ageMs in 1..(30L * 24 * 3600 * 1000)) {
                 val ageDays = ageMs / 86_400_000L
+                val rank = eventDao.getSongRankByPlayCountSuspend(song.songId)
                 persistIfNew(Moment(
                     type = "FAST_OBSESSION",
                     entityKey = "${song.songId}",
@@ -349,6 +383,7 @@ class MomentDetector @Inject constructor(
                     title = "${song.playCount} plays in $ageDays days",
                     description = "${song.title} came into your life $ageDays days ago. You've played it ${song.playCount} times.",
                     songId = song.songId,
+                    statLines = listOf("${song.playCount} plays", "$ageDays days · #$rank all-time"),
                     imageUrl = song.albumArtUrl
                 ))?.let { result += it }
             }
@@ -368,7 +403,8 @@ class MomentDetector @Inject constructor(
                 entityKey = "$longestMs",
                 triggeredAt = now,
                 title = "New record: $label",
-                description = "New personal best: $label in one sitting"
+                description = "New personal best: $label in one sitting",
+                statLines = listOf(label, "new personal best")
             ))?.let { result += it }
         }
         return result
@@ -382,6 +418,7 @@ class MomentDetector @Inject constructor(
             .filter { it.songId in top5Ids && it.firstHeardAt >= sevenDaysAgo }
         for (song in recentSongs) {
             val ageDays = (now - song.firstHeardAt) / 86_400_000L
+            val rank = eventDao.getSongRankByPlayCountSuspend(song.songId)
             persistIfNew(Moment(
                 type = "QUICK_OBSESSION",
                 entityKey = "${song.songId}",
@@ -389,6 +426,7 @@ class MomentDetector @Inject constructor(
                 title = "Fast obsession",
                 description = "You discovered ${song.title} $ageDays days ago. It's already in your top 5.",
                 songId = song.songId,
+                statLines = listOf("#$rank all-time", "$ageDays days since discovered"),
                 imageUrl = song.albumArtUrl
             ))?.let { result += it }
         }
@@ -400,12 +438,14 @@ class MomentDetector @Inject constructor(
         val weekKey = "W${LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yyyy-ww"))}"
         val newArtistsCount = eventDao.getNewArtistsSinceSuspend(sevenDaysAgo)
         if (newArtistsCount >= 8) {
+            val newSongsCount = eventDao.getNewSongsSinceSuspend(sevenDaysAgo)
             persistIfNew(Moment(
                 type = "DISCOVERY_WEEK",
                 entityKey = weekKey,
                 triggeredAt = now,
                 title = "$newArtistsCount new artists",
-                description = "You discovered $newArtistsCount new artists this week"
+                description = "You discovered $newArtistsCount new artists this week",
+                statLines = listOf("$newArtistsCount new artists", "$newSongsCount new songs")
             ))?.let { result += it }
         }
         return result
