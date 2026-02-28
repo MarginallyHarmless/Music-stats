@@ -49,28 +49,36 @@ fun MomentDetailBottomSheet(
                 .padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (moment.imageUrl != null) {
-                val imageShape = if (moment.artistId != null) CircleShape else RoundedCornerShape(8.dp)
+            if (moment.artistId != null && moment.entityName != null) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    AsyncImage(
-                        model = moment.imageUrl,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(64.dp)
-                            .clip(imageShape)
-                    )
-                    if (moment.entityName != null) {
-                        Text(
-                            text = moment.entityName,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
+                    if (moment.imageUrl != null) {
+                        AsyncImage(
+                            model = moment.imageUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape)
                         )
                     }
+                    Text(
+                        text = moment.entityName,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
+            } else if (moment.imageUrl != null) {
+                AsyncImage(
+                    model = moment.imageUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                )
             } else if (isArchetype) {
                 Text(
                     text = momentEmoji(moment.type),

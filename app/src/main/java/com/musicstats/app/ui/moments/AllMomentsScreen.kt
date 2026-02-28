@@ -178,17 +178,26 @@ private fun MomentListCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (moment.artistId != null && moment.imageUrl != null) {
+            if (moment.artistId != null && moment.entityName != null) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    AsyncImage(
-                        model = moment.imageUrl,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.size(40.dp).clip(CircleShape)
-                    )
+                    if (moment.imageUrl != null) {
+                        AsyncImage(
+                            model = moment.imageUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(40.dp).clip(CircleShape)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                        )
+                    }
                     Column {
                         Text(
                             text = moment.entityName ?: "",
