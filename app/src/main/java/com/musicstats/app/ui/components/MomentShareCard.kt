@@ -103,14 +103,16 @@ fun MomentShareCard(
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (moment.statLine != null) {
+                if (moment.statLines.isNotEmpty()) {
                     Spacer(Modifier.height(16.dp))
-                    Text(
-                        text = moment.statLine,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                    moment.statLines.forEach { stat ->
+                        Text(
+                            text = stat,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 }
             }
 

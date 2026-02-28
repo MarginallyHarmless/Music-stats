@@ -2,8 +2,10 @@ package com.musicstats.app.data
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.musicstats.app.data.Converters
 import com.musicstats.app.data.dao.ArtistDao
 import com.musicstats.app.data.dao.ListeningEventDao
 import com.musicstats.app.data.dao.MomentDao
@@ -13,9 +15,10 @@ import com.musicstats.app.data.model.ListeningEvent
 import com.musicstats.app.data.model.Moment
 import com.musicstats.app.data.model.Song
 
+@TypeConverters(Converters::class)
 @Database(
     entities = [Song::class, Artist::class, ListeningEvent::class, Moment::class],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 abstract class MusicStatsDatabase : RoomDatabase() {
@@ -138,6 +141,14 @@ abstract class MusicStatsDatabase : RoomDatabase() {
         val MIGRATION_10_11 = object : Migration(10, 11) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE moments ADD COLUMN entityName TEXT DEFAULT NULL")
+                db.execSQL("DELETE FROM moments")
+            }
+        }
+
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE moments ADD COLUMN statLines TEXT NOT NULL DEFAULT '[]'")
+                // Clear all moments — they will be re-detected with proper statLines on next run
                 db.execSQL("DELETE FROM moments")
             }
         }

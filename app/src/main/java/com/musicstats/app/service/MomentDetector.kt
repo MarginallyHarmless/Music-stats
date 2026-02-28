@@ -74,7 +74,7 @@ class MomentDetector @Inject constructor(
                         title = "$threshold plays",
                         description = "You've played ${song.title} $threshold times",
                         songId = song.songId,
-                        statLine = "${formatDuration(song.totalDurationMs)} total",
+                        statLines = listOf("${formatDuration(song.totalDurationMs)} total"),
                         imageUrl = song.albumArtUrl
                     ))?.let { result += it }
                 }
@@ -99,7 +99,7 @@ class MomentDetector @Inject constructor(
                         title = "$humanHours of ${artist.artist}",
                         description = "You've spent $humanHours listening to ${artist.artist}",
                         artistId = artistEntity?.id,
-                        statLine = "${artist.playCount} total plays",
+                        statLines = listOf("${artist.playCount} total plays"),
                         imageUrl = artistEntity?.imageUrl,
                         entityName = artist.artist
                     ))?.let { result += it }
@@ -179,7 +179,7 @@ class MomentDetector @Inject constructor(
                 type = "ARCHETYPE_NIGHT_OWL", entityKey = yearMonth, triggeredAt = now,
                 title = "Night Owl",
                 description = "You do most of your listening after 10pm",
-                statLine = "$nightPct% of your listening"
+                statLines = listOf("$nightPct% of your listening")
             ))?.let { result += it }
         }
         if (morningMs.toDouble() / totalMs > 0.5) {
@@ -188,7 +188,7 @@ class MomentDetector @Inject constructor(
                 type = "ARCHETYPE_MORNING_LISTENER", entityKey = yearMonth, triggeredAt = now,
                 title = "Morning Listener",
                 description = "You do most of your listening before 9am",
-                statLine = "$morningPct% of your listening"
+                statLines = listOf("$morningPct% of your listening")
             ))?.let { result += it }
         }
         if (totalMs > 1L && commuteAmMs > 0 && commutePmMs > 0 &&
@@ -198,7 +198,7 @@ class MomentDetector @Inject constructor(
                 type = "ARCHETYPE_COMMUTE_LISTENER", entityKey = yearMonth, triggeredAt = now,
                 title = "Commute Listener",
                 description = "Your listening peaks at 7–9am and 5–7pm",
-                statLine = "$commutePct% during commute hours"
+                statLines = listOf("$commutePct% during commute hours")
             ))?.let { result += it }
         }
 
@@ -211,7 +211,7 @@ class MomentDetector @Inject constructor(
                 type = "ARCHETYPE_COMPLETIONIST", entityKey = yearMonth, triggeredAt = now,
                 title = "Completionist",
                 description = "You skip less than 5% of songs — truly dedicated",
-                statLine = "${skipPct}% skip rate"
+                statLines = listOf("${skipPct}% skip rate")
             ))?.let { result += it }
         }
         if (skipRate > 0.40) {
@@ -220,7 +220,7 @@ class MomentDetector @Inject constructor(
                 type = "ARCHETYPE_CERTIFIED_SKIPPER", entityKey = yearMonth, triggeredAt = now,
                 title = "Certified Skipper",
                 description = "You skip more than 40% of songs. Nothing is good enough.",
-                statLine = "${skipPct}% skip rate"
+                statLines = listOf("${skipPct}% skip rate")
             ))?.let { result += it }
         }
 
@@ -230,7 +230,7 @@ class MomentDetector @Inject constructor(
                 type = "ARCHETYPE_DEEP_CUT_DIGGER", entityKey = yearMonth, triggeredAt = now,
                 title = "Deep Cut Digger",
                 description = "You've listened to ${deepCuts[0].title} over 50 times",
-                statLine = "${deepCuts[0].playCount} plays",
+                statLines = listOf("${deepCuts[0].playCount} plays"),
                 imageUrl = deepCuts[0].albumArtUrl
             ))?.let { result += it }
         }
@@ -247,7 +247,7 @@ class MomentDetector @Inject constructor(
                     title = "Loyal Fan",
                     description = "Over 50% of your listening is ${topArtists[0].artist}",
                     artistId = artistEntity?.id,
-                    statLine = "$topPct% · ${topArtists[0].playCount} plays",
+                    statLines = listOf("$topPct% · ${topArtists[0].playCount} plays"),
                     imageUrl = artistEntity?.imageUrl,
                     entityName = topArtists[0].artist
                 ))?.let { result += it }
@@ -326,7 +326,7 @@ class MomentDetector @Inject constructor(
                     title = "Maybe break up?",
                     description = "You've skipped ${artistStats.artist} $skipCount times this week",
                     artistId = artistEntity?.id,
-                    statLine = "$skipCount skips this week",
+                    statLines = listOf("$skipCount skips this week"),
                     imageUrl = artistEntity?.imageUrl,
                     entityName = artistStats.artist
                 ))?.let { result += it }

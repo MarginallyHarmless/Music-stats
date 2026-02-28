@@ -2,6 +2,7 @@ package com.musicstats.app.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -130,20 +131,24 @@ fun MomentCard(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            if (moment.statLine != null) {
+            if (moment.statLines.isNotEmpty()) {
                 Spacer(Modifier.height(6.dp))
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(Color.White.copy(alpha = 0.15f))
-                        .padding(horizontal = 10.dp, vertical = 3.dp)
-                ) {
-                    Text(
-                        text = moment.statLine,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    moment.statLines.forEach { stat ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(Color.White.copy(alpha = 0.15f))
+                                .padding(horizontal = 10.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = stat,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
                 }
             }
             Spacer(Modifier.height(6.dp))

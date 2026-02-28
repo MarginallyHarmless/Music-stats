@@ -59,11 +59,11 @@ class AllMomentsViewModel @Inject constructor(
         result += Moment(id = -1, type = "ARCHETYPE_NIGHT_OWL", entityKey = "preview",
             triggeredAt = now, title = "Night Owl",
             description = "You do most of your listening after 10pm",
-            statLine = "73% of your listening")
+            statLines = listOf("73% of your listening"))
         result += Moment(id = -2, type = "ARCHETYPE_COMPLETIONIST", entityKey = "preview",
             triggeredAt = now, title = "Completionist",
             description = "You skip less than 5% of songs — truly dedicated",
-            statLine = "2.3% skip rate")
+            statLines = listOf("2.3% skip rate"))
 
         // Artist moments — use real top artists
         artists.forEachIndexed { idx, artist ->
@@ -78,7 +78,7 @@ class AllMomentsViewModel @Inject constructor(
                 title = "$humanHours of ${artist.name}",
                 description = "You've spent $humanHours listening to ${artist.name}",
                 artistId = artistId,
-                statLine = "${artist.playCount} total plays",
+                statLines = listOf("${artist.playCount} total plays"),
                 imageUrl = artist.imageUrl,
                 entityName = artist.name
             )
@@ -95,7 +95,7 @@ class AllMomentsViewModel @Inject constructor(
                 title = "Loyal Fan",
                 description = "Over 50% of your listening is ${top.name}",
                 artistId = -10L,
-                statLine = "${top.playCount} plays",
+                statLines = listOf("${top.playCount} plays"),
                 imageUrl = top.imageUrl,
                 entityName = top.name
             )
@@ -112,7 +112,7 @@ class AllMomentsViewModel @Inject constructor(
                 title = "Maybe break up?",
                 description = "You've skipped ${artist.name} a lot this week",
                 artistId = -11L,
-                statLine = "12 skips this week",
+                statLines = listOf("12 skips this week"),
                 imageUrl = artist.imageUrl,
                 entityName = artist.name
             )
@@ -128,7 +128,7 @@ class AllMomentsViewModel @Inject constructor(
                 title = "${song.playCount} plays",
                 description = "You've played ${song.title} ${song.playCount} times",
                 songId = song.songId,
-                statLine = "${formatDuration(song.totalDurationMs)} total",
+                statLines = listOf("${formatDuration(song.totalDurationMs)} total"),
                 imageUrl = song.albumArtUrl
             )
         }
@@ -137,15 +137,15 @@ class AllMomentsViewModel @Inject constructor(
         result += Moment(id = -3, type = "ARCHETYPE_MORNING_LISTENER", entityKey = "preview",
             triggeredAt = now, title = "Morning Listener",
             description = "You do most of your listening before 9am",
-            statLine = "61% of your listening")
+            statLines = listOf("61% of your listening"))
         result += Moment(id = -4, type = "ARCHETYPE_COMMUTE_LISTENER", entityKey = "preview",
             triggeredAt = now, title = "Commute Listener",
             description = "Your listening peaks at 7–9am and 5–7pm",
-            statLine = "34% during commute hours")
+            statLines = listOf("34% during commute hours"))
         result += Moment(id = -5, type = "ARCHETYPE_CERTIFIED_SKIPPER", entityKey = "preview",
             triggeredAt = now, title = "Certified Skipper",
             description = "You skip more than 40% of songs. Nothing is good enough.",
-            statLine = "47.8% skip rate")
+            statLines = listOf("47.8% skip rate"))
         result += Moment(id = -6, type = "ARCHETYPE_EXPLORER", entityKey = "preview",
             triggeredAt = now, title = "Explorer",
             description = "You discovered 12 new artists this week")
@@ -155,7 +155,7 @@ class AllMomentsViewModel @Inject constructor(
             result += Moment(id = -7, type = "ARCHETYPE_DEEP_CUT_DIGGER", entityKey = "preview",
                 triggeredAt = now, title = "Deep Cut Digger",
                 description = "You've listened to ${songs[0].title} over 50 times",
-                statLine = "${songs[0].playCount} plays",
+                statLines = listOf("${songs[0].playCount} plays"),
                 songId = songs[0].songId,
                 imageUrl = songs[0].albumArtUrl)
         }
