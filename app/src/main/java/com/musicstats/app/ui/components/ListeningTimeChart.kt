@@ -1,63 +1,90 @@
 package com.musicstats.app.ui.components
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.musicstats.app.data.dao.DailyListening
 import com.musicstats.app.ui.theme.LocalAlbumPalette
-import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
-import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
-import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 
 @Composable
 fun ListeningTimeChart(dailyData: List<DailyListening>, modifier: Modifier = Modifier) {
-    val modelProducer = remember { CartesianChartModelProducer() }
+    val palette = LocalAlbumPalette.current
+    val accentColor = palette.accent
+    val labelColor = Color.White.copy(alpha = 0.5f)
 
-    val sortedData = remember(dailyData) {
-        val today = LocalDate.now()
+    val today = LocalDate.now()
+
+    val entries = remember(dailyData) {
         val dayMap = dailyData.associate { it.day to it.totalDurationMs }
         (6 downTo 0).map { daysBack ->
             val date = today.minusDays(daysBack.toLong())
-            val key = date.toString()
             val label = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
-            val hours = (dayMap[key] ?: 0L) / 3_600_000.0
-            label to hours
+            val ms = dayMap[date.toString()] ?: 0L
+            val isToday = daysBack == 0
+            Triple(label, ms, isToday)
         }
     }
 
-    LaunchedEffect(sortedData) {
-        modelProducer.runTransaction {
-            columnSeries {
-                series(sortedData.map { it.second })
+    val maxMs = remember(entries) { entries.maxOfOrNull { it.second } ?: 1L }
+
+    Canvas(modifier = modifier) {
+        val labelTextSizePx = 10.sp.toPx()
+        val labelAreaHeight = labelTextSizePx + 8.dp.toPx()
+        val chartHeight = size.height - labelAreaHeight
+        val minBarHeight = 3.dp.toPx()
+        val cornerRadius = 6.dp.toPx()
+        val totalGap = 8.dp.toPx() * 6 // 6 gaps between 7 bars
+        val barWidth = (size.width - totalGap) / 7f
+        val gapWidth = 8.dp.toPx()
+
+        val paint = android.graphics.Paint().apply {
+            color = labelColor.toArgb()
+            textSize = labelTextSizePx
+            textAlign = android.graphics.Paint.Align.CENTER
+            isAntiAlias = true
+        }
+
+        entries.forEachIndexed { index, (label, ms, isToday) ->
+            val left = index * (barWidth + gapWidth)
+            val centerX = left + barWidth / 2f
+
+            // Draw label
+            drawContext.canvas.nativeCanvas.drawText(
+                label,
+                centerX,
+                size.height - 2.dp.toPx(),
+                paint
+            )
+
+            // Compute bar height
+            val fraction = if (maxMs > 0) ms.toFloat() / maxMs.toFloat() else 0f
+            val barHeight = (fraction * chartHeight).coerceAtLeast(minBarHeight)
+            val top = chartHeight - barHeight
+
+            val color = when {
+                ms == 0L -> Color.White.copy(alpha = 0.07f)
+                isToday -> accentColor
+                else -> accentColor.copy(alpha = 0.6f)
             }
+
+            drawRoundRect(
+                color = color,
+                topLeft = Offset(left, top),
+                size = Size(barWidth, barHeight),
+                cornerRadius = CornerRadius(cornerRadius, cornerRadius)
+            )
         }
     }
-
-    val dayLabels = sortedData.map { it.first }
-
-    val bottomAxisValueFormatter = CartesianValueFormatter { context, value, position ->
-        dayLabels.getOrElse(value.toInt()) { "" }
-    }
-
-    CartesianChartHost(
-        chart = rememberCartesianChart(
-            rememberColumnCartesianLayer(),
-            startAxis = VerticalAxis.rememberStart(),
-            bottomAxis = HorizontalAxis.rememberBottom(valueFormatter = bottomAxisValueFormatter),
-        ),
-        modelProducer = modelProducer,
-        modifier = modifier,
-    )
 }
