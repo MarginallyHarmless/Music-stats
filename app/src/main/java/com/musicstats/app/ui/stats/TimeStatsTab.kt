@@ -16,9 +16,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAutoSize
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.musicstats.app.ui.components.GradientCard
@@ -28,7 +27,6 @@ import com.musicstats.app.ui.components.SectionHeader
 import com.musicstats.app.ui.components.StatCard
 import com.musicstats.app.util.formatDuration
 
-@OptIn(ExperimentalTextApi::class)
 @Composable
 fun TimeStatsTab(viewModel: StatsViewModel) {
     val totalTime by viewModel.totalListeningTime.collectAsState()
@@ -63,10 +61,7 @@ fun TimeStatsTab(viewModel: StatsViewModel) {
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
                             maxLines = 1,
-                            autoSize = TextAutoSize.StepBased(
-                                minFontSize = 14.sp,
-                                maxFontSize = MaterialTheme.typography.displaySmall.fontSize
-                            )
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = "listening time",

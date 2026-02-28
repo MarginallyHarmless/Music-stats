@@ -9,17 +9,19 @@ import com.musicstats.app.data.dao.ListeningEventDao
 import com.musicstats.app.data.dao.SongDao
 import com.musicstats.app.data.model.Artist
 import com.musicstats.app.data.model.ListeningEvent
+import com.musicstats.app.data.model.Moment
 import com.musicstats.app.data.model.Song
 
 @Database(
-    entities = [Song::class, Artist::class, ListeningEvent::class],
-    version = 6,
+    entities = [Song::class, Artist::class, ListeningEvent::class, Moment::class],
+    version = 7,
     exportSchema = false
 )
 abstract class MusicStatsDatabase : RoomDatabase() {
     abstract fun songDao(): SongDao
     abstract fun artistDao(): ArtistDao
     abstract fun listeningEventDao(): ListeningEventDao
+    // abstract fun momentDao(): MomentDao  -- added in Task 2
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -86,6 +88,26 @@ abstract class MusicStatsDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE songs ADD COLUMN paletteDarkVibrant INTEGER DEFAULT NULL")
                 db.execSQL("ALTER TABLE songs ADD COLUMN paletteDarkMuted INTEGER DEFAULT NULL")
                 db.execSQL("ALTER TABLE songs ADD COLUMN paletteLightVibrant INTEGER DEFAULT NULL")
+            }
+        }
+
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS moments (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        type TEXT NOT NULL,
+                        entityKey TEXT NOT NULL,
+                        triggeredAt INTEGER NOT NULL,
+                        seenAt INTEGER,
+                        sharedAt INTEGER,
+                        title TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        songId INTEGER,
+                        artistId INTEGER,
+                        UNIQUE(type, entityKey)
+                    )
+                """)
             }
         }
     }
