@@ -287,8 +287,7 @@ class MomentDetector @Inject constructor(
 
     private suspend fun detectBreakupCandidate(sevenDaysAgo: Long, now: Long): List<Moment> {
         val result = mutableListOf<Moment>()
-        val weekKey = LocalDate.now(ZoneId.systemDefault())
-            .format(DateTimeFormatter.ofPattern("yyyy-ww"))
+        val weekKey = "W${LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yyyy-ww"))}"
         val allArtists = eventDao.getAllArtistsWithDurationSuspend()
         for (artistStats in allArtists) {
             val skipCount = eventDao.getArtistSkipCountSince(artistStats.artist, sevenDaysAgo)
@@ -383,8 +382,7 @@ class MomentDetector @Inject constructor(
 
     private suspend fun detectDiscoveryWeek(sevenDaysAgo: Long, now: Long, yearMonth: String): List<Moment> {
         val result = mutableListOf<Moment>()
-        val weekKey = LocalDate.now(ZoneId.systemDefault())
-            .format(DateTimeFormatter.ofPattern("yyyy-ww"))
+        val weekKey = "W${LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yyyy-ww"))}"
         val newArtistsCount = eventDao.getNewArtistsSinceSuspend(sevenDaysAgo)
         if (newArtistsCount >= 8) {
             persistIfNew(Moment(
@@ -413,7 +411,8 @@ class MomentDetector @Inject constructor(
     }
 
     private fun startOfDay(epochMs: Long): Long {
-        val date = LocalDate.ofEpochDay(epochMs / 86_400_000L)
+        val date = java.time.Instant.ofEpochMilli(epochMs)
+            .atZone(ZoneId.systemDefault()).toLocalDate()
         return date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
     }
 }
