@@ -15,7 +15,7 @@ import com.musicstats.app.data.model.Song
 
 @Database(
     entities = [Song::class, Artist::class, ListeningEvent::class, Moment::class],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class MusicStatsDatabase : RoomDatabase() {
@@ -123,6 +123,14 @@ abstract class MusicStatsDatabase : RoomDatabase() {
         val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Clear existing moments so they are re-detected with statLine populated
+                db.execSQL("DELETE FROM moments")
+            }
+        }
+
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE moments ADD COLUMN imageUrl TEXT DEFAULT NULL")
+                // Clear so moments are re-detected with imageUrl populated
                 db.execSQL("DELETE FROM moments")
             }
         }

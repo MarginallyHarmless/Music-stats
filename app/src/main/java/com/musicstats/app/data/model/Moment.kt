@@ -19,5 +19,6 @@ data class Moment(
     val description: String,      // full punchy line, e.g. "You've played Blinding Lights 100 times"
     val songId: Long? = null,     // for album art + palette colors (nullable)
     val artistId: Long? = null,   // for artist image (nullable)
-    val statLine: String? = null
+    val statLine: String? = null,
+    val imageUrl: String? = null
 )
