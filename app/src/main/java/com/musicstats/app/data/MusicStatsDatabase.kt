@@ -6,6 +6,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.musicstats.app.data.dao.ArtistDao
 import com.musicstats.app.data.dao.ListeningEventDao
+import com.musicstats.app.data.dao.MomentDao
 import com.musicstats.app.data.dao.SongDao
 import com.musicstats.app.data.model.Artist
 import com.musicstats.app.data.model.ListeningEvent
@@ -21,7 +22,7 @@ abstract class MusicStatsDatabase : RoomDatabase() {
     abstract fun songDao(): SongDao
     abstract fun artistDao(): ArtistDao
     abstract fun listeningEventDao(): ListeningEventDao
-    // abstract fun momentDao(): MomentDao  -- added in Task 2
+    abstract fun momentDao(): MomentDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {

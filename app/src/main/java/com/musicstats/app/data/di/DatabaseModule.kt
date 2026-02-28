@@ -7,6 +7,7 @@ import coil3.SingletonImageLoader
 import com.musicstats.app.data.MusicStatsDatabase
 import com.musicstats.app.data.dao.ArtistDao
 import com.musicstats.app.data.dao.ListeningEventDao
+import com.musicstats.app.data.dao.MomentDao
 import com.musicstats.app.data.dao.SongDao
 import dagger.Module
 import dagger.Provides
@@ -47,6 +48,9 @@ object DatabaseModule {
     @Provides
     fun provideListeningEventDao(database: MusicStatsDatabase): ListeningEventDao =
         database.listeningEventDao()
+
+    @Provides
+    fun provideMomentDao(database: MusicStatsDatabase): MomentDao = database.momentDao()
 
     @Provides
     @Singleton
