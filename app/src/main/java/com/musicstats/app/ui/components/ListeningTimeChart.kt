@@ -10,6 +10,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.musicstats.app.data.dao.DailyListening
@@ -24,9 +25,8 @@ fun ListeningTimeChart(dailyData: List<DailyListening>, modifier: Modifier = Mod
     val accentColor = palette.accent
     val labelColor = Color.White.copy(alpha = 0.5f)
 
-    val today = LocalDate.now()
-
     val entries = remember(dailyData) {
+        val today = LocalDate.now()
         val dayMap = dailyData.associate { it.day to it.totalDurationMs }
         (6 downTo 0).map { daysBack ->
             val date = today.minusDays(daysBack.toLong())
@@ -39,28 +39,29 @@ fun ListeningTimeChart(dailyData: List<DailyListening>, modifier: Modifier = Mod
 
     val maxMs = remember(entries) { entries.maxOfOrNull { it.second }?.takeIf { it > 0L } ?: 1L }
 
-    Canvas(modifier = modifier) {
-        val labelTextSizePx = 10.sp.toPx()
-        val labelAreaHeight = labelTextSizePx + 8.dp.toPx()
-        val chartHeight = size.height - labelAreaHeight
-        val minBarHeight = 3.dp.toPx()
-        val cornerRadius = 6.dp.toPx()
-        val totalGap = 8.dp.toPx() * 6 // 6 gaps between 7 bars
-        val barWidth = (size.width - totalGap) / 7f
-        val gapWidth = 8.dp.toPx()
-
-        val paint = android.graphics.Paint().apply {
+    val labelTextSizePx = with(LocalDensity.current) { 10.sp.toPx() }
+    val paint = remember(labelColor, labelTextSizePx) {
+        android.graphics.Paint().apply {
             color = labelColor.toArgb()
             textSize = labelTextSizePx
             textAlign = android.graphics.Paint.Align.CENTER
             isAntiAlias = true
         }
+    }
+
+    Canvas(modifier = modifier) {
+        val labelAreaHeight = labelTextSizePx + 8.dp.toPx()
+        val chartHeight = size.height - labelAreaHeight
+        val minBarHeight = 3.dp.toPx()
+        val cornerRadius = 6.dp.toPx()
+        val totalGap = 8.dp.toPx() * 6
+        val barWidth = (size.width - totalGap) / 7f
+        val gapWidth = 8.dp.toPx()
 
         entries.forEachIndexed { index, (label, ms, isToday) ->
             val left = index * (barWidth + gapWidth)
             val centerX = left + barWidth / 2f
 
-            // Draw label
             drawContext.canvas.nativeCanvas.drawText(
                 label,
                 centerX,
@@ -68,7 +69,6 @@ fun ListeningTimeChart(dailyData: List<DailyListening>, modifier: Modifier = Mod
                 paint
             )
 
-            // Compute bar height
             val fraction = if (maxMs > 0) ms.toFloat() / maxMs.toFloat() else 0f
             val barHeight = if (ms == 0L) {
                 minBarHeight
