@@ -36,10 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
@@ -168,7 +164,7 @@ private fun SongsTab(
             )
         }
     } else {
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(songs, key = { it.songId }) { song ->
                 SongListItem(song = song, onClick = { onSongClick(song.songId) })
             }
@@ -232,7 +228,7 @@ private fun ArtistsTab(
             )
         }
     } else {
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(artists, key = { it.name }) { artist ->
                 ArtistListItem(artist = artist, onClick = { onArtistClick(artist.name) })
             }
@@ -243,7 +239,6 @@ private fun ArtistsTab(
 @Composable
 private fun SongListItem(song: SongWithStats, onClick: () -> Unit) {
     val palette = LocalAlbumPalette.current
-    val accentColor = palette.accent
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -257,14 +252,6 @@ private fun SongListItem(song: SongWithStats, onClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .drawBehind {
-                    drawRoundRect(
-                        color = accentColor,
-                        topLeft = Offset(0f, 0f),
-                        size = Size(4.dp.toPx(), size.height),
-                        cornerRadius = CornerRadius(2.dp.toPx())
-                    )
-                }
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -321,7 +308,6 @@ private fun SongListItem(song: SongWithStats, onClick: () -> Unit) {
 @Composable
 private fun ArtistListItem(artist: ArtistWithStats, onClick: () -> Unit) {
     val palette = LocalAlbumPalette.current
-    val accentColor = palette.accent
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -335,14 +321,6 @@ private fun ArtistListItem(artist: ArtistWithStats, onClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .drawBehind {
-                    drawRoundRect(
-                        color = accentColor,
-                        topLeft = Offset(0f, 0f),
-                        size = Size(4.dp.toPx(), size.height),
-                        cornerRadius = CornerRadius(2.dp.toPx())
-                    )
-                }
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)

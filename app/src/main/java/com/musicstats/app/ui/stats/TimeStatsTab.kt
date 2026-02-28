@@ -16,8 +16,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAutoSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.musicstats.app.ui.components.GradientCard
 import com.musicstats.app.ui.components.HourlyHeatmap
 import com.musicstats.app.ui.components.ListeningTimeChart
@@ -25,6 +28,7 @@ import com.musicstats.app.ui.components.SectionHeader
 import com.musicstats.app.ui.components.StatCard
 import com.musicstats.app.util.formatDuration
 
+@OptIn(ExperimentalTextApi::class)
 @Composable
 fun TimeStatsTab(viewModel: StatsViewModel) {
     val totalTime by viewModel.totalListeningTime.collectAsState()
@@ -41,71 +45,76 @@ fun TimeStatsTab(viewModel: StatsViewModel) {
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // Hero: total listening time + total plays
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            GradientCard(modifier = Modifier.weight(1f)) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = formatDuration(totalTime),
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = "listening time",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
+        // Hero + session stats (grouped with 8dp spacing)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                GradientCard(modifier = Modifier.weight(1f)) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = formatDuration(totalTime),
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            maxLines = 1,
+                            autoSize = TextAutoSize.StepBased(
+                                minFontSize = 14.sp,
+                                maxFontSize = MaterialTheme.typography.displaySmall.fontSize
+                            )
+                        )
+                        Text(
+                            text = "listening time",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+                GradientCard(modifier = Modifier.weight(1f)) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "$totalPlays",
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "total plays",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
                 }
             }
-            GradientCard(modifier = Modifier.weight(1f)) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "$totalPlays",
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = "total plays",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
-                }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StatCard(
+                    label = "Avg Session",
+                    value = formatDuration(avgSession),
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    label = "Longest",
+                    value = formatDuration(longest),
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    label = "Skips",
+                    value = "$totalSkips",
+                    modifier = Modifier.weight(1f)
+                )
             }
-        }
-
-        // Session stats
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            StatCard(
-                label = "Avg Session",
-                value = formatDuration(avgSession),
-                modifier = Modifier.weight(1f)
-            )
-            StatCard(
-                label = "Longest",
-                value = formatDuration(longest),
-                modifier = Modifier.weight(1f)
-            )
-            StatCard(
-                label = "Skips",
-                value = "$totalSkips",
-                modifier = Modifier.weight(1f)
-            )
         }
 
         // Hourly heatmap

@@ -407,67 +407,76 @@ fun HomeScreen(
         } else {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 topSongs.forEachIndexed { index, song ->
-                    Row(
+                    val palette = LocalAlbumPalette.current
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onSongClick(song.songId) }
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            .border(1.dp, palette.glassBorder, MaterialTheme.shapes.medium),
+                        shape = MaterialTheme.shapes.medium,
+                        colors = CardDefaults.cardColors(containerColor = palette.glassBackground)
                     ) {
-                        Text(
-                            text = "${index + 1}",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        if (song.albumArtUrl != null) {
-                            AsyncImage(
-                                model = song.albumArtUrl,
-                                contentDescription = "Album art",
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(MaterialTheme.shapes.small),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.MusicNote,
-                                contentDescription = "Album art",
-                                modifier = Modifier.size(48.dp),
-                                tint = Color.White.copy(alpha = 0.5f)
-                            )
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSongClick(song.songId) }
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
                             Text(
-                                text = song.title,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1
+                                text = "${index + 1}",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
                             )
-                            Text(
-                                text = song.artist,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.6f),
-                                maxLines = 1
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = formatDuration(song.totalDurationMs),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color.White.copy(alpha = 0.6f),
-                                textAlign = TextAlign.End
-                            )
-                            Text(
-                                text = "${song.playCount} plays",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.5f),
-                                textAlign = TextAlign.End
-                            )
+                            if (song.albumArtUrl != null) {
+                                AsyncImage(
+                                    model = song.albumArtUrl,
+                                    contentDescription = "Album art",
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(MaterialTheme.shapes.small),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.MusicNote,
+                                    contentDescription = "Album art",
+                                    modifier = Modifier.size(48.dp),
+                                    tint = Color.White.copy(alpha = 0.5f)
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = song.title,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1
+                                )
+                                Text(
+                                    text = song.artist,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White.copy(alpha = 0.6f),
+                                    maxLines = 1
+                                )
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = formatDuration(song.totalDurationMs),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = Color.White.copy(alpha = 0.6f),
+                                    textAlign = TextAlign.End
+                                )
+                                Text(
+                                    text = "${song.playCount} plays",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(alpha = 0.5f),
+                                    textAlign = TextAlign.End
+                                )
+                            }
                         }
                     }
                 }
