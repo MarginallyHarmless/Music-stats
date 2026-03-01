@@ -34,6 +34,9 @@ interface ArtistDao {
     @Query("SELECT * FROM artists WHERE imageUrl IS NULL")
     suspend fun getArtistsWithoutImage(): List<Artist>
 
+    @Query("UPDATE artists SET imageUrl = REPLACE(imageUrl, '250x250', '1000x1000') WHERE imageUrl LIKE '%250x250%'")
+    suspend fun upgradeDeezerImagesToXl(): Int
+
     // --- Suspend queries for MomentDetector ---
 
     @Query("SELECT * FROM artists WHERE firstHeardAt >= :since ORDER BY firstHeardAt DESC")

@@ -55,6 +55,7 @@ class HomeViewModel @Inject constructor(
         }
 
     init {
+        repository.upgradeArtworkToHighRes()
         repository.backfillArtistImages()
         repository.backfillAlbumArt()
         repository.backfillPaletteColors()

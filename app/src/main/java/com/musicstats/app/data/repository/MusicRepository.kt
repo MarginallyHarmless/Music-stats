@@ -273,4 +273,15 @@ class MusicRepository @Inject constructor(
             }
         }
     }
+
+    fun upgradeArtworkToHighRes() {
+        scope.launch {
+            val songsUpgraded = songDao.upgradeDeezerArtToXl()
+            val artistsUpgraded = artistDao.upgradeDeezerImagesToXl()
+            if (songsUpgraded > 0) {
+                songDao.clearPalettesForUpgradedArt()
+                backfillPaletteColors()
+            }
+        }
+    }
 }

@@ -52,6 +52,12 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE albumArtUrl IS NULL")
     suspend fun getSongsWithoutAlbumArt(): List<Song>
 
+    @Query("UPDATE songs SET albumArtUrl = REPLACE(albumArtUrl, '250x250', '1000x1000') WHERE albumArtUrl LIKE '%250x250%'")
+    suspend fun upgradeDeezerArtToXl(): Int
+
+    @Query("UPDATE songs SET paletteDominant = NULL WHERE albumArtUrl LIKE '%1000x1000%' AND paletteDominant IS NOT NULL")
+    suspend fun clearPalettesForUpgradedArt(): Int
+
     @Query("""
         UPDATE songs SET
             paletteDominant = :dominant,

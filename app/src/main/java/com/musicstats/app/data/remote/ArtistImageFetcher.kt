@@ -33,7 +33,7 @@ class ArtistImageFetcher @Inject constructor() {
 
             val body = connection.inputStream.bufferedReader().use { it.readText() }
             val response = json.decodeFromString<DeezerSearchResponse>(body)
-            response.data.firstOrNull()?.pictureMedium
+            response.data.firstOrNull()?.pictureXl
         } catch (_: Exception) {
             null
         }
@@ -57,7 +57,7 @@ class ArtistImageFetcher @Inject constructor() {
 
             val body = connection.inputStream.bufferedReader().use { it.readText() }
             val response = json.decodeFromString<DeezerTrackSearchResponse>(body)
-            response.data.firstOrNull()?.album?.coverMedium
+            response.data.firstOrNull()?.album?.coverXl
         } catch (_: Exception) {
             null
         }
@@ -72,8 +72,8 @@ private data class DeezerSearchResponse(
 @Serializable
 private data class DeezerArtist(
     val name: String = "",
-    @kotlinx.serialization.SerialName("picture_medium")
-    val pictureMedium: String? = null
+    @kotlinx.serialization.SerialName("picture_xl")
+    val pictureXl: String? = null
 )
 
 @Serializable
@@ -89,6 +89,6 @@ private data class DeezerTrack(
 
 @Serializable
 private data class DeezerAlbum(
-    @kotlinx.serialization.SerialName("cover_medium")
-    val coverMedium: String? = null
+    @kotlinx.serialization.SerialName("cover_xl")
+    val coverXl: String? = null
 )
