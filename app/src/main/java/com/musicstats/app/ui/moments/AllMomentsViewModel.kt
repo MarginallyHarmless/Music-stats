@@ -247,6 +247,62 @@ class AllMomentsViewModel @Inject constructor(
         result += behavioralMoment(-82, "MARATHON_WEEK", null,
             mapOf("weekDuration" to "18h 40m", "songArtistLine" to "247 songs · 31 artists"))
 
+        // ── Narrative Moments (12) ─────────────────────────────────
+
+        fun narrativeMoment(id: Long, type: String, entityName: String?, rawStats: Map<String, Any>,
+                            songId: Long? = null, imageUrl: String? = null): Moment {
+            val copy = MomentCopywriter.generate(type, entityName, rawStats, 0)
+            return Moment(
+                id = id, type = type, entityKey = "preview",
+                triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
+                entityName = entityName,
+                songId = songId,
+                statLines = copy.statLines,
+                imageUrl = imageUrl,
+                copyVariant = 0
+            )
+        }
+
+        result += narrativeMoment(-90, "NARRATIVE_ORIGIN_STORY", a0?.name ?: "Radiohead",
+            mapOf("firstSong" to (s0?.title ?: "Everything In Its Right Place"), "rank" to 3, "daysAgo" to 47, "uniqueSongs" to 9, "totalHours" to 18L),
+            imageUrl = a0?.imageUrl ?: artistArt)
+        result += narrativeMoment(-91, "NARRATIVE_GATEWAY", a0?.name ?: "Arctic Monkeys",
+            mapOf("firstSong" to (s0?.title ?: "Do I Wanna Know?"), "topSong" to (s1?.title ?: "Fluorescent Adolescent"), "ratio" to 3, "topSongLine" to "${s1?.title ?: "Fluorescent Adolescent"} (${s1?.playCount ?: 84} plays)"),
+            imageUrl = a0?.imageUrl ?: artistArt)
+        result += narrativeMoment(-92, "NARRATIVE_COLLECTION", a0?.name ?: "Arctic Monkeys",
+            mapOf("songCount" to 23, "firstSong" to (s0?.title ?: "Do I Wanna Know?"), "totalHours" to 31L, "daysAgo" to 120),
+            imageUrl = a0?.imageUrl ?: artistArt)
+        result += narrativeMoment(-93, "NARRATIVE_TAKEOVER", s1?.title ?: "Espresso",
+            mapOf("rank" to 4, "playCount" to (s1?.playCount ?: 67), "daysAgo" to 21),
+            songId = s1?.songId, imageUrl = s1?.albumArtUrl ?: songArt)
+        result += narrativeMoment(-94, "NARRATIVE_SLOW_BUILD", s0?.title ?: "a song",
+            mapOf("w1" to 2, "w2" to 5, "w3" to 11, "w4" to 19, "trajectory" to "2 → 5 → 11 → 19 plays"),
+            songId = s0?.songId, imageUrl = s0?.albumArtUrl ?: songArt)
+        result += narrativeMoment(-95, "NARRATIVE_BINGE_AND_FADE", s2?.title ?: "Heat Waves",
+            mapOf("bingePlays" to 47, "fadePlays" to 2),
+            songId = s2?.songId, imageUrl = s2?.albumArtUrl ?: songArt)
+        result += narrativeMoment(-96, "NARRATIVE_FULL_CIRCLE", a1?.name ?: "Daft Punk",
+            mapOf("gapDays" to 73, "playsThisWeek" to 12),
+            imageUrl = a1?.imageUrl ?: artistArt)
+        result += narrativeMoment(-97, "NARRATIVE_ONE_THAT_GOT_AWAY", a1?.name ?: "Tyler, The Creator",
+            mapOf("peakPlays" to 34, "peakMonth" to "February", "currentPlays" to 2),
+            imageUrl = a1?.imageUrl ?: artistArt)
+        result += narrativeMoment(-98, "NARRATIVE_SOUNDTRACK", s0?.title ?: "Blinding Lights",
+            mapOf("distinctDays" to 47, "monthSpan" to 6, "playCount" to (s0?.playCount ?: 89)),
+            songId = s0?.songId, imageUrl = s0?.albumArtUrl ?: songArt)
+        result += narrativeMoment(-99, "NARRATIVE_RABBIT_HOLE", a0?.name ?: "Radiohead",
+            mapOf("songCount" to 14, "duration" to "58m", "noInterrupt" to "no interruptions"),
+            imageUrl = a0?.imageUrl ?: artistArt)
+        result += narrativeMoment(-100, "NARRATIVE_NIGHT_AND_DAY", null,
+            mapOf("dayArtist" to (a0?.name ?: "Taylor Swift"), "nightArtist" to (a1?.name ?: "Bon Iver"),
+                "dayLine" to "${a0?.name ?: "Taylor Swift"} (12h)", "nightLine" to "${a1?.name ?: "Bon Iver"} (7h)"))
+        result += narrativeMoment(-101, "NARRATIVE_PARALLEL_LIVES", null,
+            mapOf("artist1" to (a0?.name ?: "Radiohead"), "artist2" to (a1?.name ?: "Coldplay"),
+                "artist1Line" to "${a0?.name ?: "Radiohead"}: 8h", "artist2Line" to "${a1?.name ?: "Coldplay"}: 5h",
+                "overlap" to "0 shared sessions"))
+
         return result
     }
 }
