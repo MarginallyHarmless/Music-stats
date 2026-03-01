@@ -37,16 +37,6 @@ object MomentCopywriter {
 
         return when {
             // ── Song Play Milestones ────────────────────────────
-            type == "SONG_PLAYS_10" -> MomentCopy(
-                title = "On Repeat",
-                description = "10 plays and counting — this one's got its hooks in you.",
-                statLines = buildSongMilestoneStats(rawStats)
-            )
-            type == "SONG_PLAYS_25" -> MomentCopy(
-                title = "Can't Stop",
-                description = "25 plays. You and $name have something going on.",
-                statLines = buildSongMilestoneStats(rawStats)
-            )
             type == "SONG_PLAYS_50" -> MomentCopy(
                 title = "Ride or Die",
                 description = "50 plays. This is a committed relationship at this point.",
@@ -69,11 +59,6 @@ object MomentCopywriter {
             )
 
             // ── Artist Hour Milestones ──────────────────────────
-            type == "ARTIST_HOURS_1" -> MomentCopy(
-                title = "First Hour",
-                description = "A whole hour of $name. The beginning of something.",
-                statLines = buildArtistHourStats(rawStats)
-            )
             type == "ARTIST_HOURS_5" -> MomentCopy(
                 title = "Getting Serious",
                 description = "5 hours of $name. That's a long first date.",
@@ -91,11 +76,6 @@ object MomentCopywriter {
             )
 
             // ── Streak Milestones ───────────────────────────────
-            type == "STREAK_3" -> MomentCopy(
-                title = "Hat Trick",
-                description = "3 days in a row. The streak begins.",
-                statLines = buildStreakStats(rawStats)
-            )
             type == "STREAK_7" -> MomentCopy(
                 title = "Full Week",
                 description = "7 days straight. Music every single day.",
@@ -140,11 +120,6 @@ object MomentCopywriter {
             )
 
             // ── Discovery Milestones ────────────────────────────
-            type == "SONGS_DISCOVERED_50" -> MomentCopy(
-                title = "50 Songs Deep",
-                description = "Your library is growing. 50 unique songs and counting.",
-                statLines = buildDiscoveryStats(rawStats)
-            )
             type == "SONGS_DISCOVERED_100" -> MomentCopy(
                 title = "Century Club",
                 description = "100 unique songs. Your taste is wider than you think.",
