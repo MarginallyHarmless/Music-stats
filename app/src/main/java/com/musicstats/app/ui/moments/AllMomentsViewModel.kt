@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.musicstats.app.data.dao.ArtistWithStats
 import com.musicstats.app.data.dao.SongPlayStats
 import com.musicstats.app.data.model.Moment
-import com.musicstats.app.data.model.MomentTier
 import com.musicstats.app.data.repository.MomentsRepository
 import com.musicstats.app.data.repository.MusicRepository
 import com.musicstats.app.service.MomentCopywriter
@@ -67,8 +66,8 @@ class AllMomentsViewModel @Inject constructor(
         val songArt = s0?.albumArtUrl ?: s1?.albumArtUrl ?: s2?.albumArtUrl
         val artistArt = a0?.imageUrl ?: a1?.imageUrl
 
-        // ── Song Play Milestones (6) ──────────────────────────────
-        listOf(10, 25, 50, 100, 250, 500).forEachIndexed { idx, threshold ->
+        // ── Song Play Milestones (4) ──────────────────────────────
+        listOf(50, 100, 250, 500).forEachIndexed { idx, threshold ->
             val type = "SONG_PLAYS_$threshold"
             val rawStats = mapOf<String, Any>("totalDurationMs" to (threshold * 200_000L), "rank" to (idx + 1))
             val copy = MomentCopywriter.generate(type, s0?.artist ?: "The Weeknd", rawStats, 0)
@@ -80,14 +79,12 @@ class AllMomentsViewModel @Inject constructor(
                 songId = s0?.songId,
                 statLines = copy.statLines,
                 imageUrl = s0?.albumArtUrl ?: songArt,
-                tier = MomentTier.tierFor(type).name,
-                isPersonalBest = false,
                 copyVariant = 0
             )
         }
 
-        // ── Artist Hour Milestones (4) ────────────────────────────
-        listOf(1, 5, 10, 24).forEachIndexed { idx, hours ->
+        // ── Artist Hour Milestones (3) ────────────────────────────
+        listOf(5, 10, 24).forEachIndexed { idx, hours ->
             val type = "ARTIST_HOURS_$hours"
             val rawStats = mapOf<String, Any>("playCount" to (hours * 120), "uniqueSongs" to (hours * 8))
             val copy = MomentCopywriter.generate(type, a0?.name ?: "The Weeknd", rawStats, 0)
@@ -99,14 +96,12 @@ class AllMomentsViewModel @Inject constructor(
                 entityName = a0?.name ?: "The Weeknd",
                 statLines = copy.statLines,
                 imageUrl = a0?.imageUrl ?: artistArt,
-                tier = MomentTier.tierFor(type).name,
-                isPersonalBest = false,
                 copyVariant = 0
             )
         }
 
-        // ── Streak Milestones (5) ─────────────────────────────────
-        listOf(3, 7, 14, 30, 100).forEachIndexed { idx, days ->
+        // ── Streak Milestones (4) ─────────────────────────────────
+        listOf(7, 14, 30, 100).forEachIndexed { idx, days ->
             val type = "STREAK_$days"
             val rawStats = mapOf<String, Any>("avgMinPerDay" to 47L, "uniqueSongs" to (days * 12))
             val copy = MomentCopywriter.generate(type, null, rawStats, 0)
@@ -116,8 +111,6 @@ class AllMomentsViewModel @Inject constructor(
                 title = copy.title,
                 description = copy.description,
                 statLines = copy.statLines,
-                tier = MomentTier.tierFor(type).name,
-                isPersonalBest = false,
                 copyVariant = 0
             )
         }
@@ -133,14 +126,12 @@ class AllMomentsViewModel @Inject constructor(
                 title = copy.title,
                 description = copy.description,
                 statLines = copy.statLines,
-                tier = MomentTier.tierFor(type).name,
-                isPersonalBest = false,
                 copyVariant = 0
             )
         }
 
-        // ── Discovery Milestones (4) ──────────────────────────────
-        listOf(50, 100, 250, 500).forEachIndexed { idx, count ->
+        // ── Discovery Milestones (3) ──────────────────────────────
+        listOf(100, 250, 500).forEachIndexed { idx, count ->
             val type = "SONGS_DISCOVERED_$count"
             val rawStats = mapOf<String, Any>("uniqueArtists" to (count / 5), "totalHours" to (count / 10))
             val copy = MomentCopywriter.generate(type, null, rawStats, 0)
@@ -150,8 +141,6 @@ class AllMomentsViewModel @Inject constructor(
                 title = copy.title,
                 description = copy.description,
                 statLines = copy.statLines,
-                tier = MomentTier.tierFor(type).name,
-                isPersonalBest = false,
                 copyVariant = 0
             )
         }
@@ -170,8 +159,6 @@ class AllMomentsViewModel @Inject constructor(
                 songId = songId,
                 statLines = copy.statLines,
                 imageUrl = imageUrl,
-                tier = MomentTier.tierFor(type).name,
-                isPersonalBest = false,
                 copyVariant = 0
             )
         }
@@ -219,8 +206,6 @@ class AllMomentsViewModel @Inject constructor(
                 songId = songId,
                 statLines = copy.statLines,
                 imageUrl = imageUrl,
-                tier = MomentTier.tierFor(type).name,
-                isPersonalBest = false,
                 copyVariant = 0
             )
         }
