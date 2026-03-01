@@ -6,6 +6,7 @@ import com.musicstats.app.data.dao.ListeningEventDao
 import com.musicstats.app.data.dao.MomentDao
 import com.musicstats.app.data.model.Moment
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -65,6 +66,12 @@ class MomentDetector @Inject constructor(
         newMoments += detectNarrativeTakeover()
         newMoments += detectNarrativeSlowBuild()
         newMoments += detectNarrativeBingeAndFade()
+        newMoments += detectNarrativeFullCircle(sevenDaysAgo, now)
+        newMoments += detectNarrativeOneGotAway(now)
+        newMoments += detectNarrativeSoundtrack()
+        newMoments += detectNarrativeRabbitHole(now)
+        newMoments += detectNarrativeNightAndDay(thirtyDaysAgo, now)
+        newMoments += detectNarrativeParallelLives(thirtyDaysAgo, now)
 
         return newMoments
     }
@@ -1181,6 +1188,313 @@ class MomentDetector @Inject constructor(
                 imageUrl = song.albumArtUrl,
                 copyVariant = copyVariant
             ))?.let { result += it }
+        }
+        return result
+    }
+
+    private suspend fun detectNarrativeFullCircle(sevenDaysAgo: Long, now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val weekKey = LocalDate.now(ZoneId.systemDefault())
+            .format(DateTimeFormatter.ofPattern("yyyy-ww"))
+        val artists = eventDao.getAllArtistsWithDurationSuspend()
+        for (artistStats in artists) {
+            val playsThisWeek = eventDao.getArtistPlayCountSinceSuspend(artistStats.artist, sevenDaysAgo)
+            if (playsThisWeek < 10) continue
+            val lastPlayBefore = eventDao.getArtistLastPlayedBeforeSuspend(artistStats.artist, sevenDaysAgo) ?: continue
+            val gapMs = sevenDaysAgo - lastPlayBefore
+            val gapDays = gapMs / 86_400_000L
+            if (gapDays < 60) continue
+            val type = "NARRATIVE_FULL_CIRCLE"
+            val entityKey = "${artistStats.artist}:W$weekKey"
+            if (momentDao.existsByTypeAndKey(type, entityKey)) continue
+            val artistEntity = artistDao.findByName(artistStats.artist)
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "gapDays" to gapDays,
+                "playsThisWeek" to playsThisWeek
+            )
+            val copy = MomentCopywriter.generate(type, artistStats.artist, rawStats, copyVariant)
+            persistIfNew(Moment(
+                type = type,
+                entityKey = entityKey,
+                triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
+                artistId = artistEntity?.id,
+                statLines = copy.statLines,
+                imageUrl = artistEntity?.imageUrl,
+                entityName = artistStats.artist,
+                copyVariant = copyVariant
+            ))?.let { result += it }
+        }
+        return result
+    }
+
+    private suspend fun detectNarrativeOneGotAway(now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val thirtyDaysAgo = now - 30L * 24 * 3600 * 1000
+        val oneYearAgo = now - 365L * 24 * 3600 * 1000
+        val currentMonth = YearMonth.now(ZoneId.systemDefault())
+            .format(DateTimeFormatter.ofPattern("yyyy-MM"))
+        val artists = eventDao.getAllArtistsWithDurationSuspend()
+        for (artistStats in artists) {
+            val recentPlays = eventDao.getArtistPlayCountSinceSuspend(artistStats.artist, thirtyDaysAgo)
+            if (recentPlays >= 5) continue
+            val monthlyPlays = eventDao.getArtistMonthlyPlayCounts(artistStats.artist, oneYearAgo)
+            if (monthlyPlays.isEmpty()) continue
+            val peakMonth = monthlyPlays.maxByOrNull { it.playCount } ?: continue
+            if (peakMonth.playCount < 15) continue
+            // Check peak month is 60+ days ago
+            val peakYm = YearMonth.parse(peakMonth.monthKey, DateTimeFormatter.ofPattern("yyyy-MM"))
+            val peakEndEpoch = peakYm.plusMonths(1).atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            if (now - peakEndEpoch < 60L * 86_400_000L) continue
+            // Verify artist was top 3 in peak month
+            val monthStart = peakYm.atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val monthEnd = peakYm.plusMonths(1).atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val top3 = eventDao.getTopArtistsByPlayCountInPeriod(monthStart, monthEnd, 3)
+            if (top3.none { it.artist == artistStats.artist }) continue
+            val type = "NARRATIVE_ONE_THAT_GOT_AWAY"
+            val entityKey = "${artistStats.artist}:$currentMonth"
+            if (momentDao.existsByTypeAndKey(type, entityKey)) continue
+            val artistEntity = artistDao.findByName(artistStats.artist)
+            val peakMonthName = peakYm.format(DateTimeFormatter.ofPattern("MMMM yyyy"))
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "peakMonth" to peakMonthName,
+                "peakPlays" to peakMonth.playCount,
+                "currentPlays" to recentPlays
+            )
+            val copy = MomentCopywriter.generate(type, artistStats.artist, rawStats, copyVariant)
+            persistIfNew(Moment(
+                type = type,
+                entityKey = entityKey,
+                triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
+                artistId = artistEntity?.id,
+                statLines = copy.statLines,
+                imageUrl = artistEntity?.imageUrl,
+                entityName = artistStats.artist,
+                copyVariant = copyVariant
+            ))?.let { result += it }
+        }
+        return result
+    }
+
+    private suspend fun detectNarrativeSoundtrack(): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val now = System.currentTimeMillis()
+        val ninetyDaysMs = 90L * 24 * 3600 * 1000
+        val songs = eventDao.getSongsWithMinPlays(10)
+        for (song in songs) {
+            val type = "NARRATIVE_SOUNDTRACK"
+            val entityKey = song.songId.toString()
+            if (momentDao.existsByTypeAndKey(type, entityKey)) continue
+            val ageMs = now - song.firstHeardAt
+            if (ageMs < ninetyDaysMs) continue
+            val distinctDays = eventDao.getDistinctDaysForSong(song.songId, song.firstHeardAt)
+            if (distinctDays.size < 30) continue
+            val monthSpan = (ageMs / (30L * 24 * 3600 * 1000)).coerceAtLeast(3)
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "distinctDays" to distinctDays.size,
+                "monthSpan" to monthSpan,
+                "playCount" to song.playCount
+            )
+            val copy = MomentCopywriter.generate(type, song.title, rawStats, copyVariant)
+            persistIfNew(Moment(
+                type = type,
+                entityKey = entityKey,
+                triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
+                songId = song.songId,
+                statLines = copy.statLines,
+                imageUrl = song.albumArtUrl,
+                copyVariant = copyVariant
+            ))?.let { result += it }
+        }
+        return result
+    }
+
+    private suspend fun detectNarrativeRabbitHole(now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val twoDaysAgo = now - 2L * 24 * 3600 * 1000
+        val events = eventDao.getOrderedSongArtistEventsSuspend(twoDaysAgo)
+        if (events.size < 8) return result
+        var runArtist = events[0].artist
+        var runStart = events[0].startedAt
+        var runLength = 1
+        for (i in 1 until events.size) {
+            val e = events[i]
+            val prevEnd = events[i - 1].startedAt + events[i - 1].durationMs
+            val gap = e.startedAt - prevEnd
+            if (e.artist == runArtist && gap <= 30 * 60 * 1000) {
+                runLength++
+            } else {
+                if (runLength >= 8) {
+                    val date = java.time.Instant.ofEpochMilli(runStart)
+                        .atZone(ZoneId.systemDefault()).toLocalDate()
+                        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                    val type = "NARRATIVE_RABBIT_HOLE"
+                    val entityKey = "$runArtist:$date"
+                    if (!momentDao.existsByTypeAndKey(type, entityKey)) {
+                        val artistEntity = artistDao.findByName(runArtist)
+                        val copyVariant = momentDao.countByType(type)
+                        val rawStats = mapOf<String, Any>(
+                            "runLength" to runLength
+                        )
+                        val copy = MomentCopywriter.generate(type, runArtist, rawStats, copyVariant)
+                        persistIfNew(Moment(
+                            type = type,
+                            entityKey = entityKey,
+                            triggeredAt = now,
+                            title = copy.title,
+                            description = copy.description,
+                            artistId = artistEntity?.id,
+                            statLines = copy.statLines,
+                            imageUrl = artistEntity?.imageUrl,
+                            entityName = runArtist,
+                            copyVariant = copyVariant
+                        ))?.let { result += it }
+                    }
+                }
+                runArtist = e.artist
+                runStart = e.startedAt
+                runLength = 1
+            }
+        }
+        // Check the final run
+        if (runLength >= 8) {
+            val date = java.time.Instant.ofEpochMilli(runStart)
+                .atZone(ZoneId.systemDefault()).toLocalDate()
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            val type = "NARRATIVE_RABBIT_HOLE"
+            val entityKey = "$runArtist:$date"
+            if (!momentDao.existsByTypeAndKey(type, entityKey)) {
+                val artistEntity = artistDao.findByName(runArtist)
+                val copyVariant = momentDao.countByType(type)
+                val rawStats = mapOf<String, Any>(
+                    "runLength" to runLength
+                )
+                val copy = MomentCopywriter.generate(type, runArtist, rawStats, copyVariant)
+                persistIfNew(Moment(
+                    type = type,
+                    entityKey = entityKey,
+                    triggeredAt = now,
+                    title = copy.title,
+                    description = copy.description,
+                    artistId = artistEntity?.id,
+                    statLines = copy.statLines,
+                    imageUrl = artistEntity?.imageUrl,
+                    entityName = runArtist,
+                    copyVariant = copyVariant
+                ))?.let { result += it }
+            }
+        }
+        return result
+    }
+
+    private suspend fun detectNarrativeNightAndDay(thirtyDaysAgo: Long, now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val dayArtists = eventDao.getTopArtistInTimeWindow(thirtyDaysAgo, 8, 20, 1)
+        val nightArtists = eventDao.getTopArtistInTimeWindow(thirtyDaysAgo, 22, 4, 1)
+        if (dayArtists.isEmpty() || nightArtists.isEmpty()) return result
+        val dayArtist = dayArtists.first()
+        val nightArtist = nightArtists.first()
+        if (dayArtist.artist == nightArtist.artist) return result
+        val fiveHoursMs = 5L * 3_600_000L
+        if (dayArtist.totalDurationMs < fiveHoursMs || nightArtist.totalDurationMs < fiveHoursMs) return result
+        val type = "NARRATIVE_NIGHT_AND_DAY"
+        val monthKey = YearMonth.now(ZoneId.systemDefault())
+            .format(DateTimeFormatter.ofPattern("yyyy-MM"))
+        val entityKey = monthKey
+        if (momentDao.existsByTypeAndKey(type, entityKey)) return result
+        val dayEntity = artistDao.findByName(dayArtist.artist)
+        val nightEntity = artistDao.findByName(nightArtist.artist)
+        val copyVariant = momentDao.countByType(type)
+        val rawStats = mapOf<String, Any>(
+            "dayArtist" to dayArtist.artist,
+            "nightArtist" to nightArtist.artist,
+            "dayHours" to (dayArtist.totalDurationMs / 3_600_000L),
+            "nightHours" to (nightArtist.totalDurationMs / 3_600_000L)
+        )
+        val copy = MomentCopywriter.generate(type, "${dayArtist.artist} / ${nightArtist.artist}", rawStats, copyVariant)
+        persistIfNew(Moment(
+            type = type,
+            entityKey = entityKey,
+            triggeredAt = now,
+            title = copy.title,
+            description = copy.description,
+            artistId = dayEntity?.id,
+            statLines = copy.statLines,
+            imageUrl = dayEntity?.imageUrl ?: nightEntity?.imageUrl,
+            entityName = "${dayArtist.artist} / ${nightArtist.artist}",
+            copyVariant = copyVariant
+        ))?.let { result += it }
+        return result
+    }
+
+    private suspend fun detectNarrativeParallelLives(thirtyDaysAgo: Long, now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val threeHoursMs = 3L * 3_600_000L
+        val topArtists = eventDao.getTopArtistsByDurationSuspend(thirtyDaysAgo, 20)
+            .filter { it.totalDurationMs >= threeHoursMs }
+        if (topArtists.size < 2) return result
+        // Build sessions from ordered events (30-min gap = new session)
+        val events = eventDao.getOrderedSongArtistEventsSuspend(thirtyDaysAgo)
+        if (events.isEmpty()) return result
+        val sessions = mutableListOf<MutableSet<String>>()
+        var currentSession = mutableSetOf(events[0].artist)
+        var lastEnd = events[0].startedAt + events[0].durationMs
+        for (i in 1 until events.size) {
+            val e = events[i]
+            val gap = e.startedAt - lastEnd
+            if (gap > 30 * 60 * 1000) {
+                sessions += currentSession
+                currentSession = mutableSetOf()
+            }
+            currentSession += e.artist
+            lastEnd = e.startedAt + e.durationMs
+        }
+        sessions += currentSession
+        val monthKey = YearMonth.now(ZoneId.systemDefault())
+            .format(DateTimeFormatter.ofPattern("yyyy-MM"))
+        val type = "NARRATIVE_PARALLEL_LIVES"
+        // Check pairs
+        for (i in topArtists.indices) {
+            for (j in i + 1 until topArtists.size) {
+                val a = topArtists[i].artist
+                val b = topArtists[j].artist
+                val overlap = sessions.any { session -> a in session && b in session }
+                if (overlap) continue
+                val sorted = listOf(a, b).sorted()
+                val entityKey = "${sorted[0]}:${sorted[1]}:$monthKey"
+                if (momentDao.existsByTypeAndKey(type, entityKey)) continue
+                val entityA = artistDao.findByName(a)
+                val entityB = artistDao.findByName(b)
+                val copyVariant = momentDao.countByType(type)
+                val rawStats = mapOf<String, Any>(
+                    "artist1" to sorted[0],
+                    "artist2" to sorted[1],
+                    "hours1" to (topArtists[i].totalDurationMs / 3_600_000L),
+                    "hours2" to (topArtists[j].totalDurationMs / 3_600_000L)
+                )
+                val copy = MomentCopywriter.generate(type, "${sorted[0]} / ${sorted[1]}", rawStats, copyVariant)
+                persistIfNew(Moment(
+                    type = type,
+                    entityKey = entityKey,
+                    triggeredAt = now,
+                    title = copy.title,
+                    description = copy.description,
+                    artistId = entityA?.id,
+                    statLines = copy.statLines,
+                    imageUrl = entityA?.imageUrl ?: entityB?.imageUrl,
+                    entityName = "${sorted[0]} / ${sorted[1]}",
+                    copyVariant = copyVariant
+                ))?.let { result += it }
+                return result // Only fire ONE per detection cycle
+            }
         }
         return result
     }
