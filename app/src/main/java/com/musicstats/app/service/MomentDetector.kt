@@ -5,6 +5,7 @@ import com.musicstats.app.data.dao.ArtistDao
 import com.musicstats.app.data.dao.ListeningEventDao
 import com.musicstats.app.data.dao.MomentDao
 import com.musicstats.app.data.model.Moment
+import com.musicstats.app.data.model.MomentTier
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -74,15 +75,28 @@ class MomentDetector @Inject constructor(
             val rank = eventDao.getSongRankByPlayCountSuspend(song.songId)
             for (threshold in SONG_PLAY_THRESHOLDS) {
                 if (song.playCount >= threshold) {
+                    val type = "SONG_PLAYS_$threshold"
+                    val copyVariant = momentDao.countByType(type)
+                    val rawStats = mapOf<String, Any>(
+                        "totalDurationMs" to song.totalDurationMs,
+                        "rank" to rank
+                    )
+                    val copy = MomentCopywriter.generate(type, song.artist, rawStats, copyVariant)
+                    val baseTier = MomentTier.tierFor(type)
+                    val isPersonalBest = copyVariant == 0
+                    val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
                     persistIfNew(Moment(
-                        type = "SONG_PLAYS_$threshold",
+                        type = type,
                         entityKey = "${song.songId}:$threshold",
                         triggeredAt = System.currentTimeMillis(),
-                        title = "$threshold plays",
-                        description = "You've played ${song.title} $threshold times",
+                        title = copy.title,
+                        description = copy.description,
                         songId = song.songId,
-                        statLines = listOf("${formatDuration(song.totalDurationMs)} total", "#$rank all-time"),
-                        imageUrl = song.albumArtUrl
+                        statLines = copy.statLines,
+                        imageUrl = song.albumArtUrl,
+                        tier = tier.name,
+                        isPersonalBest = isPersonalBest,
+                        copyVariant = copyVariant
                     ))?.let { result += it }
                 }
             }
@@ -98,18 +112,30 @@ class MomentDetector @Inject constructor(
             for (thresholdMs in ARTIST_HOUR_THRESHOLDS_MS) {
                 if (artist.totalDurationMs >= thresholdMs) {
                     val hours = thresholdMs / 3_600_000L
-                    val humanHours = if (hours == 1L) "1 hour" else "$hours hours"
+                    val type = "ARTIST_HOURS_$hours"
+                    val copyVariant = momentDao.countByType(type)
                     val uniqueSongs = eventDao.getUniqueSongCountForArtistSuspend(artist.artist)
+                    val rawStats = mapOf<String, Any>(
+                        "playCount" to artist.playCount,
+                        "uniqueSongs" to uniqueSongs
+                    )
+                    val copy = MomentCopywriter.generate(type, artist.artist, rawStats, copyVariant)
+                    val baseTier = MomentTier.tierFor(type)
+                    val isPersonalBest = copyVariant == 0
+                    val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
                     persistIfNew(Moment(
-                        type = "ARTIST_HOURS_$hours",
+                        type = type,
                         entityKey = "${artist.artist}:$hours",
                         triggeredAt = System.currentTimeMillis(),
-                        title = "$humanHours of ${artist.artist}",
-                        description = "You've spent $humanHours listening to ${artist.artist}",
+                        title = copy.title,
+                        description = copy.description,
                         artistId = artistEntity?.id,
-                        statLines = listOf("${artist.playCount} plays", "$uniqueSongs songs heard"),
+                        statLines = copy.statLines,
                         imageUrl = artistEntity?.imageUrl,
-                        entityName = artist.artist
+                        entityName = artist.artist,
+                        tier = tier.name,
+                        isPersonalBest = isPersonalBest,
+                        copyVariant = copyVariant
                     ))?.let { result += it }
                 }
             }
@@ -123,17 +149,30 @@ class MomentDetector @Inject constructor(
         val now = System.currentTimeMillis()
         for (threshold in STREAK_THRESHOLDS) {
             if (streak >= threshold) {
+                val type = "STREAK_$threshold"
+                val copyVariant = momentDao.countByType(type)
                 val since = now - threshold.toLong() * 86_400_000L
                 val avgMs = eventDao.getAvgDailyListeningMsSuspend(since)
                 val avgMins = avgMs / 60_000L
                 val uniqueSongs = eventDao.getUniqueSongCountInPeriodSuspend(since)
+                val rawStats = mapOf<String, Any>(
+                    "avgMinPerDay" to avgMins,
+                    "uniqueSongs" to uniqueSongs
+                )
+                val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+                val baseTier = MomentTier.tierFor(type)
+                val isPersonalBest = copyVariant == 0
+                val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
                 persistIfNew(Moment(
-                    type = "STREAK_$threshold",
+                    type = type,
                     entityKey = "$threshold",
                     triggeredAt = now,
-                    title = "$threshold-day streak",
-                    description = "$threshold days in a row — you're on fire",
-                    statLines = listOf("avg ${avgMins}min/day", "$uniqueSongs songs this streak")
+                    title = copy.title,
+                    description = copy.description,
+                    statLines = copy.statLines,
+                    tier = tier.name,
+                    isPersonalBest = isPersonalBest,
+                    copyVariant = copyVariant
                 ))?.let { result += it }
             }
         }
@@ -148,13 +187,26 @@ class MomentDetector @Inject constructor(
         for (thresholdMs in TOTAL_HOUR_THRESHOLDS_MS) {
             if (totalMs >= thresholdMs) {
                 val hours = thresholdMs / 3_600_000L
+                val type = "TOTAL_HOURS_$hours"
+                val copyVariant = momentDao.countByType(type)
+                val rawStats = mapOf<String, Any>(
+                    "uniqueSongs" to uniqueSongs,
+                    "uniqueArtists" to uniqueArtists
+                )
+                val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+                val baseTier = MomentTier.tierFor(type)
+                val isPersonalBest = copyVariant == 0
+                val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
                 persistIfNew(Moment(
-                    type = "TOTAL_HOURS_$hours",
+                    type = type,
                     entityKey = "$hours",
                     triggeredAt = now,
-                    title = "$hours hours",
-                    description = "You've listened to ${hours}h of music in total",
-                    statLines = listOf("$uniqueSongs unique songs", "$uniqueArtists artists")
+                    title = copy.title,
+                    description = copy.description,
+                    statLines = copy.statLines,
+                    tier = tier.name,
+                    isPersonalBest = isPersonalBest,
+                    copyVariant = copyVariant
                 ))?.let { result += it }
             }
         }
@@ -169,13 +221,26 @@ class MomentDetector @Inject constructor(
         val totalHours = totalMs / 3_600_000L
         for (threshold in DISCOVERY_THRESHOLDS) {
             if (uniqueSongs >= threshold) {
+                val type = "SONGS_DISCOVERED_$threshold"
+                val copyVariant = momentDao.countByType(type)
+                val rawStats = mapOf<String, Any>(
+                    "uniqueArtists" to uniqueArtists,
+                    "totalHours" to totalHours
+                )
+                val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+                val baseTier = MomentTier.tierFor(type)
+                val isPersonalBest = copyVariant == 0
+                val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
                 persistIfNew(Moment(
-                    type = "SONGS_DISCOVERED_$threshold",
+                    type = type,
                     entityKey = "$threshold",
                     triggeredAt = System.currentTimeMillis(),
-                    title = "$threshold songs",
-                    description = "You've discovered $threshold unique songs",
-                    statLines = listOf("from $uniqueArtists artists", "${totalHours}h of music")
+                    title = copy.title,
+                    description = copy.description,
+                    statLines = copy.statLines,
+                    tier = tier.name,
+                    isPersonalBest = isPersonalBest,
+                    copyVariant = copyVariant
                 ))?.let { result += it }
             }
         }
@@ -202,33 +267,66 @@ class MomentDetector @Inject constructor(
                 0 -> "midnight"; 1 -> "1am"; 2 -> "2am"; 3 -> "3am"
                 22 -> "10pm"; 23 -> "11pm"; else -> "${peakNightHour}pm"
             }
+            val type = "ARCHETYPE_NIGHT_OWL"
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "nightPct" to "${nightPct}%",
+                "peakLabel" to peakLabel
+            )
+            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
-                type = "ARCHETYPE_NIGHT_OWL", entityKey = yearMonth, triggeredAt = now,
-                title = "Night Owl",
-                description = "You do most of your listening after 10pm",
-                statLines = listOf("$nightPct% of your listening", "peak: $peakLabel")
+                type = type, entityKey = yearMonth, triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
+                statLines = copy.statLines,
+                tier = tier.name,
+                isPersonalBest = false,
+                copyVariant = copyVariant
             ))?.let { result += it }
         }
         if (morningMs.toDouble() / totalMs > 0.5) {
             val morningPct = (morningMs * 100 / totalMs).toInt()
             val peakMorningHour = hourly.filter { it.hour in 5..8 }
                 .maxByOrNull { it.totalDurationMs }?.hour ?: 7
+            val type = "ARCHETYPE_MORNING_LISTENER"
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "morningPct" to "${morningPct}%",
+                "peakLabel" to "${peakMorningHour}am"
+            )
+            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
-                type = "ARCHETYPE_MORNING_LISTENER", entityKey = yearMonth, triggeredAt = now,
-                title = "Morning Listener",
-                description = "You do most of your listening before 9am",
-                statLines = listOf("$morningPct% of your listening", "peak: ${peakMorningHour}am")
+                type = type, entityKey = yearMonth, triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
+                statLines = copy.statLines,
+                tier = tier.name,
+                isPersonalBest = false,
+                copyVariant = copyVariant
             ))?.let { result += it }
         }
         if (totalMs > 1L && commuteAmMs > 0 && commutePmMs > 0 &&
             (commuteAmMs + commutePmMs).toDouble() / totalMs > 0.3) {
             val commutePct = ((commuteAmMs + commutePmMs) * 100 / totalMs).toInt()
             val commuteDays = eventDao.getCommuteDaysCountSuspend(since)
+            val type = "ARCHETYPE_COMMUTE_LISTENER"
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "commutePct" to "${commutePct}%",
+                "commuteDays" to "$commuteDays"
+            )
+            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
-                type = "ARCHETYPE_COMMUTE_LISTENER", entityKey = yearMonth, triggeredAt = now,
-                title = "Commute Listener",
-                description = "Your listening peaks at 7–9am and 5–7pm",
-                statLines = listOf("$commutePct% during commute hours", "$commuteDays days this month")
+                type = type, entityKey = yearMonth, triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
+                statLines = copy.statLines,
+                tier = tier.name,
+                isPersonalBest = false,
+                copyVariant = copyVariant
             ))?.let { result += it }
         }
 
@@ -237,20 +335,42 @@ class MomentDetector @Inject constructor(
         val skipRate = totalSkips.toDouble() / (totalPlays + totalSkips)
         if (skipRate < 0.05) {
             val skipPct = "%.1f".format(skipRate * 100)
+            val type = "ARCHETYPE_COMPLETIONIST"
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "skipPct" to "${skipPct}%",
+                "totalPlays" to "$totalPlays"
+            )
+            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
-                type = "ARCHETYPE_COMPLETIONIST", entityKey = yearMonth, triggeredAt = now,
-                title = "Completionist",
-                description = "You skip less than 5% of songs — truly dedicated",
-                statLines = listOf("${skipPct}% skip rate", "$totalPlays plays")
+                type = type, entityKey = yearMonth, triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
+                statLines = copy.statLines,
+                tier = tier.name,
+                isPersonalBest = false,
+                copyVariant = copyVariant
             ))?.let { result += it }
         }
         if (skipRate > 0.40) {
             val skipPct = "%.1f".format(skipRate * 100)
+            val type = "ARCHETYPE_CERTIFIED_SKIPPER"
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "skipPct" to "${skipPct}%",
+                "skipCount" to "$totalSkips"
+            )
+            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
-                type = "ARCHETYPE_CERTIFIED_SKIPPER", entityKey = yearMonth, triggeredAt = now,
-                title = "Certified Skipper",
-                description = "You skip more than 40% of songs. Nothing is good enough.",
-                statLines = listOf("${skipPct}% skip rate", "$totalSkips skips")
+                type = type, entityKey = yearMonth, triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
+                statLines = copy.statLines,
+                tier = tier.name,
+                isPersonalBest = false,
+                copyVariant = copyVariant
             ))?.let { result += it }
         }
 
@@ -260,12 +380,23 @@ class MomentDetector @Inject constructor(
             val deepCutHours = deepCutMs / 3_600_000L
             val deepCutMins = (deepCutMs % 3_600_000L) / 60_000L
             val deepCutDuration = if (deepCutHours > 0) "${deepCutHours}h ${deepCutMins}m" else "${deepCutMins}m"
+            val type = "ARCHETYPE_DEEP_CUT_DIGGER"
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "playCount" to "${deepCuts[0].playCount}",
+                "duration" to deepCutDuration
+            )
+            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
-                type = "ARCHETYPE_DEEP_CUT_DIGGER", entityKey = yearMonth, triggeredAt = now,
-                title = "Deep Cut Digger",
-                description = "You've listened to ${deepCuts[0].title} over 50 times",
-                statLines = listOf("${deepCuts[0].playCount} plays", "$deepCutDuration total"),
-                imageUrl = deepCuts[0].albumArtUrl
+                type = type, entityKey = yearMonth, triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
+                statLines = copy.statLines,
+                imageUrl = deepCuts[0].albumArtUrl,
+                tier = tier.name,
+                isPersonalBest = false,
+                copyVariant = copyVariant
             ))?.let { result += it }
         }
 
@@ -276,14 +407,25 @@ class MomentDetector @Inject constructor(
             if (topMs.toDouble() / allMs > 0.5) {
                 val artistEntity = artistDao.findByName(topArtists[0].artist)
                 val topPct = (topMs * 100 / allMs).toInt()
+                val type = "ARCHETYPE_LOYAL_FAN"
+                val copyVariant = momentDao.countByType(type)
+                val rawStats = mapOf<String, Any>(
+                    "topPct" to "${topPct}%",
+                    "playCount" to "${topArtists[0].playCount}"
+                )
+                val copy = MomentCopywriter.generate(type, topArtists[0].artist, rawStats, copyVariant)
+                val tier = MomentTier.tierFor(type)
                 persistIfNew(Moment(
-                    type = "ARCHETYPE_LOYAL_FAN", entityKey = yearMonth, triggeredAt = now,
-                    title = "Loyal Fan",
-                    description = "Over 50% of your listening is ${topArtists[0].artist}",
+                    type = type, entityKey = yearMonth, triggeredAt = now,
+                    title = copy.title,
+                    description = copy.description,
                     artistId = artistEntity?.id,
-                    statLines = listOf("$topPct% of listening", "${topArtists[0].playCount} plays"),
+                    statLines = copy.statLines,
                     imageUrl = artistEntity?.imageUrl,
-                    entityName = topArtists[0].artist
+                    entityName = topArtists[0].artist,
+                    tier = tier.name,
+                    isPersonalBest = false,
+                    copyVariant = copyVariant
                 ))?.let { result += it }
             }
         }
@@ -291,11 +433,22 @@ class MomentDetector @Inject constructor(
         val newArtistsThisWeek = eventDao.getNewArtistsSinceSuspend(now - 7L * 24 * 3600 * 1000)
         if (newArtistsThisWeek >= 5) {
             val newSongsThisWeek = eventDao.getNewSongsSinceSuspend(now - 7L * 24 * 3600 * 1000)
+            val type = "ARCHETYPE_EXPLORER"
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "newArtists" to "$newArtistsThisWeek",
+                "newSongs" to "$newSongsThisWeek"
+            )
+            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
-                type = "ARCHETYPE_EXPLORER", entityKey = yearMonth, triggeredAt = now,
-                title = "Explorer",
-                description = "You discovered $newArtistsThisWeek new artists this week",
-                statLines = listOf("$newArtistsThisWeek new artists", "$newSongsThisWeek new songs")
+                type = type, entityKey = yearMonth, triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
+                statLines = copy.statLines,
+                tier = tier.name,
+                isPersonalBest = false,
+                copyVariant = copyVariant
             ))?.let { result += it }
         }
 
@@ -306,11 +459,22 @@ class MomentDetector @Inject constructor(
         if (weekendMs.toDouble() / totalFourWeekMs > 0.6) {
             val weekendPct = (weekendMs * 100 / totalFourWeekMs).toInt()
             val weekendHoursPerWeek = weekendMs / 4 / 3_600_000L
+            val type = "ARCHETYPE_WEEKEND_WARRIOR"
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "weekendPct" to "${weekendPct}%",
+                "weekendHours" to "${weekendHoursPerWeek}h"
+            )
+            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
-                type = "ARCHETYPE_WEEKEND_WARRIOR", entityKey = yearMonth, triggeredAt = now,
-                title = "Weekend Warrior",
-                description = "Most of your listening happens on weekends",
-                statLines = listOf("$weekendPct% on weekends", "${weekendHoursPerWeek}h on weekends/week")
+                type = type, entityKey = yearMonth, triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
+                statLines = copy.statLines,
+                tier = tier.name,
+                isPersonalBest = false,
+                copyVariant = copyVariant
             ))?.let { result += it }
         }
 
@@ -321,11 +485,22 @@ class MomentDetector @Inject constructor(
         if (topArtistThisMonth.isNotEmpty() && uniqueArtistsThisMonth >= 15) {
             val topArtistPct = (topArtistThisMonth[0].totalDurationMs * 100 / totalThisMonthMs).toInt()
             if (topArtistPct < 15) {
+                val type = "ARCHETYPE_WIDE_TASTE"
+                val copyVariant = momentDao.countByType(type)
+                val rawStats = mapOf<String, Any>(
+                    "uniqueArtists" to "$uniqueArtistsThisMonth",
+                    "topArtistPct" to "${topArtistPct}%"
+                )
+                val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+                val tier = MomentTier.tierFor(type)
                 persistIfNew(Moment(
-                    type = "ARCHETYPE_WIDE_TASTE", entityKey = yearMonth, triggeredAt = now,
-                    title = "Wide Taste",
-                    description = "No single artist dominates your listening",
-                    statLines = listOf("$uniqueArtistsThisMonth artists this month", "top artist: $topArtistPct%")
+                    type = type, entityKey = yearMonth, triggeredAt = now,
+                    title = copy.title,
+                    description = copy.description,
+                    statLines = copy.statLines,
+                    tier = tier.name,
+                    isPersonalBest = false,
+                    copyVariant = copyVariant
                 ))?.let { result += it }
             }
         }
@@ -338,18 +513,29 @@ class MomentDetector @Inject constructor(
             val top3Pct = (top3Plays * 100 / totalPlaysThisMonth).toInt()
             if (top3Pct > 40) {
                 val topSong = top3ThisMonth[0]
+                val type = "ARCHETYPE_REPEAT_OFFENDER"
+                val copyVariant = momentDao.countByType(type)
+                val rawStats = mapOf<String, Any>(
+                    "top3Pct" to "${top3Pct}%",
+                    "topSongLine" to "${topSong.title} \u00d7 ${topSong.playCount}"
+                )
+                val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+                val tier = MomentTier.tierFor(type)
                 persistIfNew(Moment(
-                    type = "ARCHETYPE_REPEAT_OFFENDER", entityKey = yearMonth, triggeredAt = now,
-                    title = "Repeat Offender",
-                    description = "You found your songs. You're not letting go.",
+                    type = type, entityKey = yearMonth, triggeredAt = now,
+                    title = copy.title,
+                    description = copy.description,
                     songId = topSong.songId,
-                    statLines = listOf("top 3 songs: $top3Pct% of plays", "${topSong.title} × ${topSong.playCount}"),
-                    imageUrl = topSong.albumArtUrl
+                    statLines = copy.statLines,
+                    imageUrl = topSong.albumArtUrl,
+                    tier = tier.name,
+                    isPersonalBest = false,
+                    copyVariant = copyVariant
                 ))?.let { result += it }
             }
         }
 
-        // Album Listener — detect consecutive same-artist runs ≥ 5 in sessions
+        // Album Listener — detect consecutive same-artist runs >= 5 in sessions
         val orderedEvents = eventDao.getOrderedSongArtistEventsSuspend(since)
         val sessionGapMs = 30 * 60 * 1000L // 30-minute gap = new session
         data class AlbumRun(val artist: String, val length: Int)
@@ -384,13 +570,24 @@ class MomentDetector @Inject constructor(
                 eventDao.getTopSongsInPeriodByPlayCountSuspend(since, 100)
                     .firstOrNull { it.artist == topRunArtist }
             else null
+            val type = "ARCHETYPE_ALBUM_LISTENER"
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "albumRuns" to "${albumRuns.size}",
+                "avgPerRun" to "$avgRun"
+            )
+            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
-                type = "ARCHETYPE_ALBUM_LISTENER", entityKey = yearMonth, triggeredAt = now,
-                title = "Album Listener",
-                description = "You don't shuffle. You commit.",
+                type = type, entityKey = yearMonth, triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
                 songId = topSong?.songId,
-                statLines = listOf("${albumRuns.size} album runs this month", "avg $avgRun songs per run"),
-                imageUrl = topSong?.albumArtUrl
+                statLines = copy.statLines,
+                imageUrl = topSong?.albumArtUrl,
+                tier = tier.name,
+                isPersonalBest = false,
+                copyVariant = copyVariant
             ))?.let { result += it }
         }
 
@@ -405,15 +602,28 @@ class MomentDetector @Inject constructor(
         for (song in todaySongs) {
             if (song.playCount >= 5) {
                 val allTimePlays = eventDao.getSongPlayCountSinceSuspend(song.songId, 0L)
+                val type = "OBSESSION_DAILY"
+                val copyVariant = momentDao.countByType(type)
+                val rawStats = mapOf<String, Any>(
+                    "playCountToday" to "${song.playCount}",
+                    "allTimePlays" to "$allTimePlays"
+                )
+                val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+                val baseTier = MomentTier.tierFor(type)
+                val isPersonalBest = copyVariant == 0
+                val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
                 persistIfNew(Moment(
-                    type = "OBSESSION_DAILY",
+                    type = type,
                     entityKey = "${song.songId}:$todayDate",
                     triggeredAt = now,
-                    title = "${song.playCount}x in one day",
-                    description = "You played ${song.title} ${song.playCount} times today. Are you okay?",
+                    title = copy.title,
+                    description = copy.description,
                     songId = song.songId,
-                    statLines = listOf("${song.playCount} plays today", "$allTimePlays all-time"),
-                    imageUrl = song.albumArtUrl
+                    statLines = copy.statLines,
+                    imageUrl = song.albumArtUrl,
+                    tier = tier.name,
+                    isPersonalBest = isPersonalBest,
+                    copyVariant = copyVariant
                 ))?.let { result += it }
             }
         }
@@ -430,15 +640,28 @@ class MomentDetector @Inject constructor(
         for (song in recentSongs) {
             val days = eventDao.getDistinctDaysForSong(song.songId, sevenDaysAgo).toSet()
             if (days.containsAll(last7Days)) {
+                val type = "DAILY_RITUAL"
+                val copyVariant = momentDao.countByType(type)
+                val rawStats = mapOf<String, Any>(
+                    "playCount" to "${song.playCount}",
+                    "duration" to formatDuration(song.totalDurationMs)
+                )
+                val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+                val baseTier = MomentTier.tierFor(type)
+                val isPersonalBest = copyVariant == 0
+                val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
                 persistIfNew(Moment(
-                    type = "DAILY_RITUAL",
+                    type = type,
                     entityKey = "${song.songId}:$detectedDate",
                     triggeredAt = now,
-                    title = "Daily ritual",
-                    description = "You've listened to ${song.title} every day for 7 days",
+                    title = copy.title,
+                    description = copy.description,
                     songId = song.songId,
-                    statLines = listOf("${song.playCount} all-time plays", "${formatDuration(song.totalDurationMs)} total"),
-                    imageUrl = song.albumArtUrl
+                    statLines = copy.statLines,
+                    imageUrl = song.albumArtUrl,
+                    tier = tier.name,
+                    isPersonalBest = isPersonalBest,
+                    copyVariant = copyVariant
                 ))?.let { result += it }
             }
         }
@@ -454,16 +677,27 @@ class MomentDetector @Inject constructor(
             if (skipCount >= 10) {
                 val artistEntity = artistDao.findByName(artistStats.artist)
                 val playsThisWeek = eventDao.getArtistPlayCountSinceSuspend(artistStats.artist, sevenDaysAgo)
+                val type = "BREAKUP_CANDIDATE"
+                val copyVariant = momentDao.countByType(type)
+                val rawStats = mapOf<String, Any>(
+                    "skipCount" to "$skipCount",
+                    "playsThisWeek" to "$playsThisWeek"
+                )
+                val copy = MomentCopywriter.generate(type, artistStats.artist, rawStats, copyVariant)
+                val tier = MomentTier.tierFor(type)
                 persistIfNew(Moment(
-                    type = "BREAKUP_CANDIDATE",
+                    type = type,
                     entityKey = "${artistStats.artist}:$weekKey",
                     triggeredAt = now,
-                    title = "Maybe break up?",
-                    description = "You've skipped ${artistStats.artist} $skipCount times this week",
+                    title = copy.title,
+                    description = copy.description,
                     artistId = artistEntity?.id,
-                    statLines = listOf("$skipCount skips this week", "$playsThisWeek plays this week"),
+                    statLines = copy.statLines,
                     imageUrl = artistEntity?.imageUrl,
-                    entityName = artistStats.artist
+                    entityName = artistStats.artist,
+                    tier = tier.name,
+                    isPersonalBest = false,
+                    copyVariant = copyVariant
                 ))?.let { result += it }
             }
         }
@@ -478,15 +712,29 @@ class MomentDetector @Inject constructor(
             if (ageMs in 1..(30L * 24 * 3600 * 1000)) {
                 val ageDays = ageMs / 86_400_000L
                 val rank = eventDao.getSongRankByPlayCountSuspend(song.songId)
+                val type = "FAST_OBSESSION"
+                val copyVariant = momentDao.countByType(type)
+                val rawStats = mapOf<String, Any>(
+                    "playCount" to "${song.playCount}",
+                    "ageDays" to "$ageDays",
+                    "ageLine" to "$ageDays days \u00b7 #$rank all-time"
+                )
+                val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+                val baseTier = MomentTier.tierFor(type)
+                val isPersonalBest = copyVariant == 0
+                val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
                 persistIfNew(Moment(
-                    type = "FAST_OBSESSION",
+                    type = type,
                     entityKey = "${song.songId}",
                     triggeredAt = now,
-                    title = "${song.playCount} plays in $ageDays days",
-                    description = "${song.title} came into your life $ageDays days ago. You've played it ${song.playCount} times.",
+                    title = copy.title,
+                    description = copy.description,
                     songId = song.songId,
-                    statLines = listOf("${song.playCount} plays", "$ageDays days · #$rank all-time"),
-                    imageUrl = song.albumArtUrl
+                    statLines = copy.statLines,
+                    imageUrl = song.albumArtUrl,
+                    tier = tier.name,
+                    isPersonalBest = isPersonalBest,
+                    copyVariant = copyVariant
                 ))?.let { result += it }
             }
         }
@@ -500,13 +748,26 @@ class MomentDetector @Inject constructor(
             val hours = longestMs / 3_600_000L
             val mins = (longestMs % 3_600_000L) / 60_000L
             val label = if (hours > 0) "${hours}h ${mins}m" else "${mins}m"
+            val type = "LONGEST_SESSION"
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "sessionLabel" to label,
+                "pbLabel" to "new personal best"
+            )
+            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            val baseTier = MomentTier.tierFor(type)
+            val isPersonalBest = true
+            val tier = MomentTier.bumped(baseTier)
             persistIfNew(Moment(
-                type = "LONGEST_SESSION",
+                type = type,
                 entityKey = "$longestMs",
                 triggeredAt = now,
-                title = "New record: $label",
-                description = "New personal best: $label in one sitting",
-                statLines = listOf(label, "new personal best")
+                title = copy.title,
+                description = copy.description,
+                statLines = copy.statLines,
+                tier = tier.name,
+                isPersonalBest = isPersonalBest,
+                copyVariant = copyVariant
             ))?.let { result += it }
         }
         return result
@@ -521,15 +782,29 @@ class MomentDetector @Inject constructor(
         for (song in recentSongs) {
             val ageDays = (now - song.firstHeardAt) / 86_400_000L
             val rank = eventDao.getSongRankByPlayCountSuspend(song.songId)
+            val type = "QUICK_OBSESSION"
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "rank" to "$rank",
+                "ageLine" to "$ageDays days",
+                "ageDays" to "$ageDays"
+            )
+            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            val baseTier = MomentTier.tierFor(type)
+            val isPersonalBest = copyVariant == 0
+            val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
             persistIfNew(Moment(
-                type = "QUICK_OBSESSION",
+                type = type,
                 entityKey = "${song.songId}",
                 triggeredAt = now,
-                title = "Fast obsession",
-                description = "You discovered ${song.title} $ageDays days ago. It's already in your top 5.",
+                title = copy.title,
+                description = copy.description,
                 songId = song.songId,
-                statLines = listOf("#$rank all-time", "$ageDays days since discovered"),
-                imageUrl = song.albumArtUrl
+                statLines = copy.statLines,
+                imageUrl = song.albumArtUrl,
+                tier = tier.name,
+                isPersonalBest = isPersonalBest,
+                copyVariant = copyVariant
             ))?.let { result += it }
         }
         return result
@@ -541,13 +816,26 @@ class MomentDetector @Inject constructor(
         val newArtistsCount = eventDao.getNewArtistsSinceSuspend(sevenDaysAgo)
         if (newArtistsCount >= 8) {
             val newSongsCount = eventDao.getNewSongsSinceSuspend(sevenDaysAgo)
+            val type = "DISCOVERY_WEEK"
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "newArtists" to "$newArtistsCount",
+                "newSongs" to "$newSongsCount"
+            )
+            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            val baseTier = MomentTier.tierFor(type)
+            val isPersonalBest = copyVariant == 0
+            val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
             persistIfNew(Moment(
-                type = "DISCOVERY_WEEK",
+                type = type,
                 entityKey = weekKey,
                 triggeredAt = now,
-                title = "$newArtistsCount new artists",
-                description = "You discovered $newArtistsCount new artists this week",
-                statLines = listOf("$newArtistsCount new artists", "$newSongsCount new songs")
+                title = copy.title,
+                description = copy.description,
+                statLines = copy.statLines,
+                tier = tier.name,
+                isPersonalBest = isPersonalBest,
+                copyVariant = copyVariant
             ))?.let { result += it }
         }
         return result
@@ -564,15 +852,26 @@ class MomentDetector @Inject constructor(
             val lastPlayedBefore = eventDao.getSongLastPlayedBeforeSuspend(song.songId, todayStart) ?: continue
             val gapDays = (todayStart - lastPlayedBefore) / 86_400_000L
             if (gapDays >= 30) {
+                val type = "RESURRECTION"
+                val copyVariant = momentDao.countByType(type)
+                val rawStats = mapOf<String, Any>(
+                    "gapDays" to "$gapDays",
+                    "playsToday" to "${song.playCount}"
+                )
+                val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+                val tier = MomentTier.tierFor(type)
                 persistIfNew(Moment(
-                    type = "RESURRECTION",
+                    type = type,
                     entityKey = "${song.songId}:$todayDate",
                     triggeredAt = now,
-                    title = "It's back",
-                    description = "${song.title} went quiet for $gapDays days. Today it's all you're playing.",
+                    title = copy.title,
+                    description = copy.description,
                     songId = song.songId,
-                    statLines = listOf("$gapDays days away", "${song.playCount} plays today"),
-                    imageUrl = song.albumArtUrl
+                    statLines = copy.statLines,
+                    imageUrl = song.albumArtUrl,
+                    tier = tier.name,
+                    isPersonalBest = false,
+                    copyVariant = copyVariant
                 ))?.let { result += it }
             }
         }
@@ -588,13 +887,24 @@ class MomentDetector @Inject constructor(
             if (dayNight.nightMs >= 2 * 3_600_000L) {
                 val duration = formatDuration(dayNight.nightMs)
                 val songCount = (dayNight.nightMs / 210_000L).toInt().coerceAtLeast(1)
+                val type = "NIGHT_BINGE"
+                val copyVariant = momentDao.countByType(type)
+                val rawStats = mapOf<String, Any>(
+                    "duration" to duration,
+                    "songCount" to "$songCount"
+                )
+                val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+                val tier = MomentTier.tierFor(type)
                 persistIfNew(Moment(
-                    type = "NIGHT_BINGE",
+                    type = type,
                     entityKey = dayNight.day,
                     triggeredAt = now,
-                    title = "Night binge",
-                    description = "You listened for $duration after midnight",
-                    statLines = listOf("$duration after midnight", "~$songCount songs")
+                    title = copy.title,
+                    description = copy.description,
+                    statLines = copy.statLines,
+                    tier = tier.name,
+                    isPersonalBest = false,
+                    copyVariant = copyVariant
                 ))?.let { result += it }
             }
         }
@@ -611,15 +921,26 @@ class MomentDetector @Inject constructor(
         val top5Pct = (top5Plays * 100 / totalPlaysThisWeek).toInt()
         if (top5Pct >= 80) {
             val topSong = top5.first()
+            val type = "COMFORT_ZONE"
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "top5Pct" to "$top5Pct",
+                "totalPlays" to "$totalPlaysThisWeek"
+            )
+            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
-                type = "COMFORT_ZONE",
+                type = type,
                 entityKey = weekKey,
                 triggeredAt = now,
-                title = "Comfort zone",
-                description = "Your top 5 songs made up $top5Pct% of your listening this week",
+                title = copy.title,
+                description = copy.description,
                 songId = topSong.songId,
-                statLines = listOf("$top5Pct% from 5 songs", "$totalPlaysThisWeek plays this week"),
-                imageUrl = topSong.albumArtUrl
+                statLines = copy.statLines,
+                imageUrl = topSong.albumArtUrl,
+                tier = tier.name,
+                isPersonalBest = false,
+                copyVariant = copyVariant
             ))?.let { result += it }
         }
         return result
@@ -637,16 +958,27 @@ class MomentDetector @Inject constructor(
             val gapDays = (now - lastPlayedBefore) / 86_400_000L
             if (gapDays >= 60) {
                 val artistEntity = artistDao.findByName(artistStats.artist)
+                val type = "REDISCOVERY"
+                val copyVariant = momentDao.countByType(type)
+                val rawStats = mapOf<String, Any>(
+                    "gapDays" to "$gapDays",
+                    "playsThisWeek" to "$playsThisWeek"
+                )
+                val copy = MomentCopywriter.generate(type, artistStats.artist, rawStats, copyVariant)
+                val tier = MomentTier.tierFor(type)
                 persistIfNew(Moment(
-                    type = "REDISCOVERY",
+                    type = type,
                     entityKey = "${artistStats.artist}:$weekKey",
                     triggeredAt = now,
-                    title = "You're back",
-                    description = "You hadn't played ${artistStats.artist} in $gapDays days. Welcome back.",
+                    title = copy.title,
+                    description = copy.description,
                     artistId = artistEntity?.id,
-                    statLines = listOf("$gapDays days away", "$playsThisWeek plays this week"),
+                    statLines = copy.statLines,
                     imageUrl = artistEntity?.imageUrl,
-                    entityName = artistStats.artist
+                    entityName = artistStats.artist,
+                    tier = tier.name,
+                    isPersonalBest = false,
+                    copyVariant = copyVariant
                 ))?.let { result += it }
             }
         }
@@ -667,15 +999,28 @@ class MomentDetector @Inject constructor(
             val ageDays = (now - songDetails.firstHeardAt) / 86_400_000L
             if (ageDays < 60) continue
             val totalPlays = playsBeforeThisWeek + playsThisWeek
+            val type = "SLOW_BURN"
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "ageDays" to "$ageDays",
+                "totalPlays" to "$totalPlays"
+            )
+            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            val baseTier = MomentTier.tierFor(type)
+            val isPersonalBest = copyVariant == 0
+            val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
             persistIfNew(Moment(
-                type = "SLOW_BURN",
+                type = type,
                 entityKey = "${song.songId}:$weekKey",
                 triggeredAt = now,
-                title = "Slow burn",
-                description = "${song.title} has been in your library for $ageDays days. It just clicked.",
+                title = copy.title,
+                description = copy.description,
                 songId = song.songId,
-                statLines = listOf("$ageDays days to click", "$totalPlays plays now"),
-                imageUrl = song.albumArtUrl
+                statLines = copy.statLines,
+                imageUrl = song.albumArtUrl,
+                tier = tier.name,
+                isPersonalBest = isPersonalBest,
+                copyVariant = copyVariant
             ))?.let { result += it }
         }
         return result
@@ -696,13 +1041,26 @@ class MomentDetector @Inject constructor(
             val songCount = eventDao.getTopSongsInPeriodByPlayCountSuspend(sevenDaysAgo, 999).size
             val artistCount = eventDao.getUniqueArtistCountSinceSuspend(sevenDaysAgo)
             val duration = formatDuration(currentWeekMs)
+            val type = "MARATHON_WEEK"
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "weekDuration" to duration,
+                "songArtistLine" to "$songCount songs \u00b7 $artistCount artists"
+            )
+            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            val baseTier = MomentTier.tierFor(type)
+            val isPersonalBest = true
+            val tier = MomentTier.bumped(baseTier)
             persistIfNew(Moment(
-                type = "MARATHON_WEEK",
+                type = type,
                 entityKey = weekKey,
                 triggeredAt = now,
-                title = "Marathon week",
-                description = "New record: $duration this week",
-                statLines = listOf("$duration this week", "$songCount songs · $artistCount artists")
+                title = copy.title,
+                description = copy.description,
+                statLines = copy.statLines,
+                tier = tier.name,
+                isPersonalBest = isPersonalBest,
+                copyVariant = copyVariant
             ))?.let { result += it }
         }
         return result
