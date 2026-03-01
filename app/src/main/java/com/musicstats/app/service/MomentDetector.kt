@@ -59,6 +59,9 @@ class MomentDetector @Inject constructor(
         newMoments += detectSlowBurn(sevenDaysAgo, now)
         newMoments += detectMarathonWeek(now)
 
+        // Clean up any stale narrative moments with "?" from key mismatches
+        momentDao.deleteStaleByTypePattern("NARRATIVE_%")
+
         // Narrative moments
         newMoments += detectNarrativeOriginStory()
         newMoments += detectNarrativeGateway()
@@ -1057,9 +1060,13 @@ class MomentDetector @Inject constructor(
             } else 0
             if (daysSinceFirst < 30) continue
             val copyVariant = momentDao.countByType(type)
+            val firstSong = eventDao.getFirstSongByArtist(artistStats.artist)
+            val totalHours = artistStats.totalDurationMs / 3_600_000L
             val rawStats = mapOf<String, Any>(
-                "uniqueSongs" to uniqueSongs,
-                "daysSinceFirst" to daysSinceFirst
+                "songCount" to uniqueSongs,
+                "firstSong" to (firstSong?.title ?: "the beginning"),
+                "totalHours" to totalHours,
+                "daysAgo" to daysSinceFirst
             )
             val copy = MomentCopywriter.generate(type, artistStats.artist, rawStats, copyVariant)
             persistIfNew(Moment(
@@ -1095,7 +1102,7 @@ class MomentDetector @Inject constructor(
             val rawStats = mapOf<String, Any>(
                 "rank" to rank,
                 "playCount" to song.playCount,
-                "ageDays" to ageDays
+                "daysAgo" to ageDays
             )
             val copy = MomentCopywriter.generate(type, song.title, rawStats, copyVariant)
             persistIfNew(Moment(
@@ -1130,9 +1137,12 @@ class MomentDetector @Inject constructor(
             val entityKey = "${song.songId}:$endWeekKey"
             if (momentDao.existsByTypeAndKey(type, entityKey)) continue
             val copyVariant = momentDao.countByType(type)
-            val weekLine = lastFour.joinToString(" → ") { "${it.playCount}" }
             val rawStats = mapOf<String, Any>(
-                "weekLine" to weekLine,
+                "w1" to lastFour[0].playCount,
+                "w2" to lastFour[1].playCount,
+                "w3" to lastFour[2].playCount,
+                "w4" to lastFour[3].playCount,
+                "trajectory" to lastFour.joinToString(" → ") { "${it.playCount}" },
                 "playCount" to song.playCount
             )
             val copy = MomentCopywriter.generate(type, song.title, rawStats, copyVariant)
@@ -1172,9 +1182,8 @@ class MomentDetector @Inject constructor(
             if (playsAfter >= 5) continue
             val copyVariant = momentDao.countByType(type)
             val rawStats = mapOf<String, Any>(
-                "playsFirstTwoWeeks" to playsFirstTwoWeeks,
-                "playsAfter" to playsAfter,
-                "ageDays" to ageDays
+                "bingePlays" to playsFirstTwoWeeks,
+                "fadePlays" to playsAfter
             )
             val copy = MomentCopywriter.generate(type, song.title, rawStats, copyVariant)
             persistIfNew(Moment(
@@ -1324,6 +1333,7 @@ class MomentDetector @Inject constructor(
         if (events.size < 8) return result
         var runArtist = events[0].artist
         var runStart = events[0].startedAt
+        var runStartIndex = 0
         var runLength = 1
         for (i in 1 until events.size) {
             val e = events[i]
@@ -1333,66 +1343,52 @@ class MomentDetector @Inject constructor(
                 runLength++
             } else {
                 if (runLength >= 8) {
-                    val date = java.time.Instant.ofEpochMilli(runStart)
-                        .atZone(ZoneId.systemDefault()).toLocalDate()
-                        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-                    val type = "NARRATIVE_RABBIT_HOLE"
-                    val entityKey = "$runArtist:$date"
-                    if (!momentDao.existsByTypeAndKey(type, entityKey)) {
-                        val artistEntity = artistDao.findByName(runArtist)
-                        val copyVariant = momentDao.countByType(type)
-                        val rawStats = mapOf<String, Any>(
-                            "runLength" to runLength
-                        )
-                        val copy = MomentCopywriter.generate(type, runArtist, rawStats, copyVariant)
-                        persistIfNew(Moment(
-                            type = type,
-                            entityKey = entityKey,
-                            triggeredAt = now,
-                            title = copy.title,
-                            description = copy.description,
-                            artistId = artistEntity?.id,
-                            statLines = copy.statLines,
-                            imageUrl = artistEntity?.imageUrl,
-                            entityName = runArtist,
-                            copyVariant = copyVariant
-                        ))?.let { result += it }
-                    }
+                    val lastEvent = events[i - 1]
+                    val durationMs = (lastEvent.startedAt + lastEvent.durationMs) - runStart
+                    emitRabbitHole(runArtist, runStart, runLength, durationMs, now)?.let { result += it }
                 }
                 runArtist = e.artist
                 runStart = e.startedAt
+                runStartIndex = i
                 runLength = 1
             }
         }
         // Check the final run
         if (runLength >= 8) {
-            val date = java.time.Instant.ofEpochMilli(runStart)
-                .atZone(ZoneId.systemDefault()).toLocalDate()
-                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-            val type = "NARRATIVE_RABBIT_HOLE"
-            val entityKey = "$runArtist:$date"
-            if (!momentDao.existsByTypeAndKey(type, entityKey)) {
-                val artistEntity = artistDao.findByName(runArtist)
-                val copyVariant = momentDao.countByType(type)
-                val rawStats = mapOf<String, Any>(
-                    "runLength" to runLength
-                )
-                val copy = MomentCopywriter.generate(type, runArtist, rawStats, copyVariant)
-                persistIfNew(Moment(
-                    type = type,
-                    entityKey = entityKey,
-                    triggeredAt = now,
-                    title = copy.title,
-                    description = copy.description,
-                    artistId = artistEntity?.id,
-                    statLines = copy.statLines,
-                    imageUrl = artistEntity?.imageUrl,
-                    entityName = runArtist,
-                    copyVariant = copyVariant
-                ))?.let { result += it }
-            }
+            val lastEvent = events.last()
+            val durationMs = (lastEvent.startedAt + lastEvent.durationMs) - runStart
+            emitRabbitHole(runArtist, runStart, runLength, durationMs, now)?.let { result += it }
         }
         return result
+    }
+
+    private suspend fun emitRabbitHole(artist: String, runStart: Long, songCount: Int, durationMs: Long, now: Long): Moment? {
+        val date = java.time.Instant.ofEpochMilli(runStart)
+            .atZone(ZoneId.systemDefault()).toLocalDate()
+            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+        val type = "NARRATIVE_RABBIT_HOLE"
+        val entityKey = "$artist:$date"
+        if (momentDao.existsByTypeAndKey(type, entityKey)) return null
+        val artistEntity = artistDao.findByName(artist)
+        val copyVariant = momentDao.countByType(type)
+        val rawStats = mapOf<String, Any>(
+            "songCount" to songCount,
+            "duration" to formatDuration(durationMs),
+            "noInterrupt" to "no interruptions"
+        )
+        val copy = MomentCopywriter.generate(type, artist, rawStats, copyVariant)
+        return persistIfNew(Moment(
+            type = type,
+            entityKey = entityKey,
+            triggeredAt = now,
+            title = copy.title,
+            description = copy.description,
+            artistId = artistEntity?.id,
+            statLines = copy.statLines,
+            imageUrl = artistEntity?.imageUrl,
+            entityName = artist,
+            copyVariant = copyVariant
+        ))
     }
 
     private suspend fun detectNarrativeNightAndDay(thirtyDaysAgo: Long, now: Long): List<Moment> {
@@ -1413,11 +1409,13 @@ class MomentDetector @Inject constructor(
         val dayEntity = artistDao.findByName(dayArtist.artist)
         val nightEntity = artistDao.findByName(nightArtist.artist)
         val copyVariant = momentDao.countByType(type)
+        val dayHours = dayArtist.totalDurationMs / 3_600_000L
+        val nightHours = nightArtist.totalDurationMs / 3_600_000L
         val rawStats = mapOf<String, Any>(
             "dayArtist" to dayArtist.artist,
             "nightArtist" to nightArtist.artist,
-            "dayHours" to (dayArtist.totalDurationMs / 3_600_000L),
-            "nightHours" to (nightArtist.totalDurationMs / 3_600_000L)
+            "dayLine" to "${dayArtist.artist} (${dayHours}h)",
+            "nightLine" to "${nightArtist.artist} (${nightHours}h)"
         )
         val copy = MomentCopywriter.generate(type, "${dayArtist.artist} / ${nightArtist.artist}", rawStats, copyVariant)
         persistIfNew(Moment(
@@ -1474,11 +1472,14 @@ class MomentDetector @Inject constructor(
                 val entityA = artistDao.findByName(a)
                 val entityB = artistDao.findByName(b)
                 val copyVariant = momentDao.countByType(type)
+                val hours1 = topArtists[i].totalDurationMs / 3_600_000L
+                val hours2 = topArtists[j].totalDurationMs / 3_600_000L
                 val rawStats = mapOf<String, Any>(
                     "artist1" to sorted[0],
                     "artist2" to sorted[1],
-                    "hours1" to (topArtists[i].totalDurationMs / 3_600_000L),
-                    "hours2" to (topArtists[j].totalDurationMs / 3_600_000L)
+                    "artist1Line" to "${sorted[0]}: ${hours1}h",
+                    "artist2Line" to "${sorted[1]}: ${hours2}h",
+                    "overlap" to "0 shared sessions"
                 )
                 val copy = MomentCopywriter.generate(type, "${sorted[0]} / ${sorted[1]}", rawStats, copyVariant)
                 persistIfNew(Moment(

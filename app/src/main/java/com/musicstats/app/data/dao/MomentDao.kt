@@ -39,4 +39,7 @@ interface MomentDao {
 
     @Query("SELECT COUNT(*) FROM moments WHERE type = :type")
     suspend fun countByType(type: String): Int
+
+    @Query("DELETE FROM moments WHERE type LIKE :typePattern AND (description LIKE '%? %' OR description LIKE '%?.')")
+    suspend fun deleteStaleByTypePattern(typePattern: String): Int
 }
