@@ -86,6 +86,16 @@ data class WeeklyListening(
     val totalMs: Long
 )
 
+data class WeeklyPlays(
+    val weekKey: String,
+    val playCount: Int
+)
+
+data class MonthlyPlays(
+    val monthKey: String,
+    val playCount: Int
+)
+
 @Dao
 interface ListeningEventDao {
 
@@ -644,4 +654,108 @@ interface ListeningEventDao {
         AND CAST(strftime('%H', startedAt / 1000, 'unixepoch', 'localtime') AS INTEGER) IN (7, 8, 17, 18)
     """)
     suspend fun getCommuteDaysCountSuspend(since: Long): Int
+
+    // --- Narrative Moment queries ---
+
+    @Query("""
+        SELECT e.songId, s.title, s.artist, s.albumArtUrl,
+               COALESCE(SUM(e.durationMs), 0) AS totalDurationMs,
+               COUNT(CASE WHEN e.completed = 1 THEN 1 END) AS playCount
+        FROM listening_events e
+        JOIN songs s ON e.songId = s.id
+        WHERE s.artist = :artist
+        GROUP BY e.songId
+        ORDER BY MIN(e.startedAt) ASC
+        LIMIT 1
+    """)
+    suspend fun getFirstSongByArtist(artist: String): SongPlayStats?
+
+    @Query("""
+        SELECT e.songId, s.title, s.artist, s.albumArtUrl,
+               COALESCE(SUM(e.durationMs), 0) AS totalDurationMs,
+               COUNT(CASE WHEN e.completed = 1 THEN 1 END) AS playCount
+        FROM listening_events e
+        JOIN songs s ON e.songId = s.id
+        WHERE s.artist = :artist AND e.completed = 1
+        GROUP BY e.songId
+        ORDER BY playCount DESC
+        LIMIT 1
+    """)
+    suspend fun getMostPlayedSongByArtist(artist: String): SongPlayStats?
+
+    @Query("""
+        SELECT COUNT(*) + 1 FROM (
+            SELECT s.artist, SUM(e.durationMs) AS totalMs
+            FROM listening_events e
+            JOIN songs s ON e.songId = s.id
+            WHERE e.completed = 1
+            GROUP BY s.artist
+        ) WHERE totalMs > (
+            SELECT COALESCE(SUM(e2.durationMs), 0)
+            FROM listening_events e2
+            JOIN songs s2 ON e2.songId = s2.id
+            WHERE s2.artist = :artist AND e2.completed = 1
+        )
+    """)
+    suspend fun getArtistRankByDuration(artist: String): Int
+
+    @Query("""
+        SELECT strftime('%Y-W%W', startedAt / 1000, 'unixepoch', 'localtime') AS weekKey,
+               COUNT(*) AS playCount
+        FROM listening_events
+        WHERE songId = :songId AND completed = 1 AND startedAt >= :since
+        GROUP BY weekKey
+        ORDER BY weekKey ASC
+    """)
+    suspend fun getWeeklyPlayCountsForSong(songId: Long, since: Long): List<WeeklyPlays>
+
+    @Query("""
+        SELECT COUNT(*) FROM listening_events
+        WHERE songId = :songId AND completed = 1
+        AND startedAt >= :from AND startedAt < :until
+    """)
+    suspend fun getSongPlayCountBetween(songId: Long, from: Long, until: Long): Int
+
+    @Query("""
+        SELECT strftime('%Y-%m', e.startedAt / 1000, 'unixepoch', 'localtime') AS monthKey,
+               COUNT(*) AS playCount
+        FROM listening_events e
+        JOIN songs s ON e.songId = s.id
+        WHERE s.artist = :artist AND e.completed = 1 AND e.startedAt >= :since
+        GROUP BY monthKey
+        ORDER BY monthKey ASC
+    """)
+    suspend fun getArtistMonthlyPlayCounts(artist: String, since: Long): List<MonthlyPlays>
+
+    @Query("""
+        SELECT s.artist, SUM(e.durationMs) AS totalDurationMs, COUNT(*) AS playCount
+        FROM listening_events e
+        JOIN songs s ON e.songId = s.id
+        WHERE e.completed = 1 AND e.startedAt >= :from AND e.startedAt < :until
+        GROUP BY s.artist
+        ORDER BY playCount DESC
+        LIMIT :limit
+    """)
+    suspend fun getTopArtistsByPlayCountInPeriod(from: Long, until: Long, limit: Int): List<ArtistPlayStats>
+
+    @Query("""
+        SELECT s.artist,
+               COALESCE(SUM(e.durationMs), 0) AS totalDurationMs,
+               COUNT(*) AS playCount
+        FROM listening_events e
+        JOIN songs s ON e.songId = s.id
+        WHERE e.completed = 1 AND e.startedAt >= :since
+        AND (
+            CASE WHEN :hourStart <= :hourEnd
+                THEN CAST(strftime('%H', e.startedAt / 1000, 'unixepoch', 'localtime') AS INTEGER) >= :hourStart
+                     AND CAST(strftime('%H', e.startedAt / 1000, 'unixepoch', 'localtime') AS INTEGER) < :hourEnd
+                ELSE CAST(strftime('%H', e.startedAt / 1000, 'unixepoch', 'localtime') AS INTEGER) >= :hourStart
+                     OR CAST(strftime('%H', e.startedAt / 1000, 'unixepoch', 'localtime') AS INTEGER) < :hourEnd
+            END
+        )
+        GROUP BY s.artist
+        ORDER BY totalDurationMs DESC
+        LIMIT :limit
+    """)
+    suspend fun getTopArtistInTimeWindow(since: Long, hourStart: Int, hourEnd: Int, limit: Int): List<ArtistPlayStats>
 }
