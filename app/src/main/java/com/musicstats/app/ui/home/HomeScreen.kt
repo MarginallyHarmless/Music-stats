@@ -65,6 +65,7 @@ import com.musicstats.app.ui.components.MomentShareCard
 import com.musicstats.app.ui.components.SectionHeader
 import com.musicstats.app.ui.components.StatCard
 import com.musicstats.app.ui.moments.MomentDetailBottomSheet
+import com.musicstats.app.ui.share.ArtistSpotlightCard
 import com.musicstats.app.ui.share.DailyRecapCard
 import com.musicstats.app.ui.share.ShareBottomSheet
 import com.musicstats.app.ui.share.ShareCardRenderer
@@ -320,6 +321,41 @@ fun HomeScreen(
                                 )
                         )
                     }
+                    // Share button
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(12.dp)
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Color.Black.copy(alpha = 0.40f))
+                            .clickable {
+                                val info = topArtistInfo ?: return@clickable
+                                val density = context.resources.displayMetrics.density
+                                val w = (360 * density).toInt()
+                                val h = (640 * density).toInt()
+                                ShareCardRenderer.renderComposable(context, w, h, {
+                                    MusicStatsTheme {
+                                        ArtistSpotlightCard(
+                                            name = info.name,
+                                            imageUrl = info.imageUrl,
+                                            playCount = info.playCount,
+                                            totalTimeMs = info.totalDurationMs
+                                        )
+                                    }
+                                }) { bitmap ->
+                                    ShareCardRenderer.shareBitmap(context, bitmap)
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Share",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                     Column(
                         modifier = Modifier
                             .padding(20.dp)
@@ -545,9 +581,8 @@ fun HomeScreen(
                     moment = moment,
                     onShare = {
                         val density = context.resources.displayMetrics.density
-                        val w = (360 * density).toInt()
-                        val h = (640 * density).toInt()
-                        ShareCardRenderer.renderComposable(context, w, h, {
+                        val size = (360 * density).toInt()
+                        ShareCardRenderer.renderComposable(context, size, size, {
                             MusicStatsTheme {
                                 MomentShareCard(moment = moment, imageUrl = moment.imageUrl)
                             }

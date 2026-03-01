@@ -122,8 +122,11 @@ fun SongDetailScreen(
                                     title = currentSong.title,
                                     artist = currentSong.artist,
                                     albumArtUrl = currentSong.albumArtUrl,
+                                    album = currentSong.album,
                                     playCount = totalPlayCount,
-                                    totalTimeMs = totalListeningTime
+                                    totalTimeMs = totalListeningTime,
+                                    skipCount = skipCount,
+                                    skipRate = (skipRate * 100).toInt()
                                 )
                             }
                         }) { bitmap ->

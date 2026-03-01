@@ -18,7 +18,7 @@ import com.musicstats.app.data.model.Song
 @TypeConverters(Converters::class)
 @Database(
     entities = [Song::class, Artist::class, ListeningEvent::class, Moment::class],
-    version = 13,
+    version = 14,
     exportSchema = false
 )
 abstract class MusicStatsDatabase : RoomDatabase() {
@@ -178,6 +178,16 @@ abstract class MusicStatsDatabase : RoomDatabase() {
                 // Songs will get proper artwork on their next play via bitmap save.
                 db.execSQL("UPDATE songs SET albumArtUrl = NULL WHERE albumArtUrl LIKE 'content://%'")
                 // Re-detect moments so they pick up corrected imageUrls
+                db.execSQL("DELETE FROM moments")
+            }
+        }
+
+        // Remove Audible audiobook entries
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DELETE FROM listening_events WHERE sourceApp = 'com.audible.application'")
+                db.execSQL("DELETE FROM songs WHERE id NOT IN (SELECT DISTINCT songId FROM listening_events)")
+                db.execSQL("DELETE FROM artists WHERE name NOT IN (SELECT DISTINCT artist FROM songs)")
                 db.execSQL("DELETE FROM moments")
             }
         }

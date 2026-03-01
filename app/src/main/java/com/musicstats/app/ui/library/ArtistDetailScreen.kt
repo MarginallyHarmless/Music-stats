@@ -122,8 +122,10 @@ fun ArtistDetailScreen(
                                 ArtistSpotlightCard(
                                     name = viewModel.artistName,
                                     imageUrl = imageUrl,
-                                    playCount = currentStats?.totalEvents ?: 0,
-                                    totalTimeMs = currentStats?.totalDurationMs ?: 0L
+                                    playCount = totalEvents,
+                                    totalTimeMs = totalTime,
+                                    skipCount = skipCount,
+                                    skipRate = skipRate
                                 )
                             }
                         }) { bitmap ->

@@ -7,19 +7,28 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.allowHardware
+import coil3.size.Size
+import com.musicstats.app.ui.components.StatCard
 import com.musicstats.app.util.formatDuration
+
+private val CardBackground = Color(0xFF0A0A0F)
 
 @Composable
 fun DailyRecapCard(
@@ -142,72 +151,115 @@ fun SongSpotlightCard(
     title: String,
     artist: String,
     albumArtUrl: String?,
+    album: String? = null,
     playCount: Int,
-    totalTimeMs: Long
+    totalTimeMs: Long,
+    skipCount: Int = 0,
+    skipRate: Int = 0
 ) {
-    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
-    val tertiaryContainer = MaterialTheme.colorScheme.tertiaryContainer
-    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
+    val context = LocalContext.current
 
-    Box(
+    Column(
         modifier = Modifier
             .width(360.dp)
             .height(640.dp)
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(primaryContainer, tertiaryContainer),
-                    start = Offset.Zero,
-                    end = Offset(360f * 3, 640f * 3)
-                )
-            )
-            .padding(32.dp),
-        contentAlignment = Alignment.Center
+            .clip(RoundedCornerShape(20.dp))
+            .background(CardBackground)
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text(
-                text = "ON REPEAT",
-                style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 2.sp),
-                color = onPrimaryContainer.copy(alpha = 0.5f)
-            )
+        // Hero image with title overlay
+        Box(modifier = Modifier.fillMaxWidth()) {
             if (albumArtUrl != null) {
+                val softwareModel = remember(albumArtUrl) {
+                    ImageRequest.Builder(context)
+                        .data(albumArtUrl)
+                        .allowHardware(false)
+                        .size(Size.ORIGINAL)
+                        .build()
+                }
                 AsyncImage(
-                    model = albumArtUrl,
+                    model = softwareModel,
                     contentDescription = null,
-                    modifier = Modifier.size(180.dp).clip(RoundedCornerShape(16.dp)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(380.dp),
                     contentScale = ContentScale.Crop
                 )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(380.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, CardBackground),
+                                startY = 500f
+                            )
+                        )
+                )
+            } else {
+                Spacer(modifier = Modifier.height(200.dp))
             }
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = onPrimaryContainer,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = artist,
-                style = MaterialTheme.typography.titleMedium,
-                color = onPrimaryContainer.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = "$playCount", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = onPrimaryContainer)
-                    Text(text = "plays", style = MaterialTheme.typography.bodySmall, color = onPrimaryContainer.copy(alpha = 0.6f))
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = formatDuration(totalTimeMs), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = onPrimaryContainer)
-                    Text(text = "listened", style = MaterialTheme.typography.bodySmall, color = onPrimaryContainer.copy(alpha = 0.6f))
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = artist,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White.copy(alpha = 0.7f)
+                )
+                if (!album.isNullOrBlank()) {
+                    Text(
+                        text = album,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.6f)
+                    )
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            Text(text = "Music Stats", style = MaterialTheme.typography.labelSmall, color = onPrimaryContainer.copy(alpha = 0.3f))
         }
+
+        Spacer(Modifier.height(20.dp))
+
+        // 2×2 stat grid
+        Column(
+            modifier = Modifier.padding(horizontal = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StatCard(label = "Plays", value = "$playCount", modifier = Modifier.weight(1f))
+                StatCard(label = "Total Time", value = formatDuration(totalTimeMs), modifier = Modifier.weight(1f))
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StatCard(label = "Skips", value = "$skipCount", modifier = Modifier.weight(1f))
+                StatCard(label = "Skip Rate", value = "$skipRate%", modifier = Modifier.weight(1f))
+            }
+        }
+
+        Spacer(Modifier.weight(1f))
+
+        // Watermark
+        Text(
+            text = "vibes",
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 2.sp),
+            color = Color.White.copy(alpha = 0.35f),
+            modifier = Modifier
+                .align(Alignment.End)
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+        )
     }
 }
 
@@ -216,62 +268,97 @@ fun ArtistSpotlightCard(
     name: String,
     imageUrl: String?,
     playCount: Int,
-    totalTimeMs: Long
+    totalTimeMs: Long,
+    skipCount: Int = 0,
+    skipRate: Int = 0
 ) {
-    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
-    val tertiaryContainer = MaterialTheme.colorScheme.tertiaryContainer
-    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
+    val context = LocalContext.current
 
-    Box(
+    Column(
         modifier = Modifier
             .width(360.dp)
             .height(640.dp)
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(primaryContainer, tertiaryContainer),
-                    start = Offset.Zero,
-                    end = Offset(360f * 3, 640f * 3)
-                )
-            )
-            .padding(32.dp),
-        contentAlignment = Alignment.Center
+            .clip(RoundedCornerShape(20.dp))
+            .background(CardBackground)
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text(
-                text = "MY TOP ARTIST",
-                style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 2.sp),
-                color = onPrimaryContainer.copy(alpha = 0.5f)
-            )
+        // Hero image with title overlay
+        Box(modifier = Modifier.fillMaxWidth()) {
             if (imageUrl != null) {
+                val softwareModel = remember(imageUrl) {
+                    ImageRequest.Builder(context)
+                        .data(imageUrl)
+                        .allowHardware(false)
+                        .size(Size.ORIGINAL)
+                        .build()
+                }
                 AsyncImage(
-                    model = imageUrl,
+                    model = softwareModel,
                     contentDescription = null,
-                    modifier = Modifier.size(160.dp).clip(CircleShape),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(380.dp),
                     contentScale = ContentScale.Crop
                 )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(380.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, CardBackground),
+                                startY = 500f
+                            )
+                        )
+                )
+            } else {
+                Spacer(modifier = Modifier.height(200.dp))
             }
             Text(
                 text = name,
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = onPrimaryContainer,
-                textAlign = TextAlign.Center
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = "$playCount", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = onPrimaryContainer)
-                    Text(text = "plays", style = MaterialTheme.typography.bodySmall, color = onPrimaryContainer.copy(alpha = 0.6f))
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = formatDuration(totalTimeMs), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = onPrimaryContainer)
-                    Text(text = "listened", style = MaterialTheme.typography.bodySmall, color = onPrimaryContainer.copy(alpha = 0.6f))
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(text = "Music Stats", style = MaterialTheme.typography.labelSmall, color = onPrimaryContainer.copy(alpha = 0.3f))
         }
+
+        Spacer(Modifier.height(20.dp))
+
+        // 2×2 stat grid
+        Column(
+            modifier = Modifier.padding(horizontal = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StatCard(label = "Plays", value = "$playCount", modifier = Modifier.weight(1f))
+                StatCard(label = "Total Time", value = formatDuration(totalTimeMs), modifier = Modifier.weight(1f))
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StatCard(label = "Skips", value = "$skipCount", modifier = Modifier.weight(1f))
+                StatCard(label = "Skip Rate", value = "$skipRate%", modifier = Modifier.weight(1f))
+            }
+        }
+
+        Spacer(Modifier.weight(1f))
+
+        // Watermark
+        Text(
+            text = "vibes",
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 2.sp),
+            color = Color.White.copy(alpha = 0.35f),
+            modifier = Modifier
+                .align(Alignment.End)
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+        )
     }
 }

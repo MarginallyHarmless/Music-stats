@@ -133,6 +133,7 @@ class MediaSessionTracker @Inject constructor(
 
     private val ignoredApps = setOf(
         "com.google.android.youtube",  // Regular YouTube (videos, not music)
+        "com.audible.application",     // Audible audiobooks
     )
 
     @Synchronized
