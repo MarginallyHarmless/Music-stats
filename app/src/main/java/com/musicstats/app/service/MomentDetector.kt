@@ -5,7 +5,6 @@ import com.musicstats.app.data.dao.ArtistDao
 import com.musicstats.app.data.dao.ListeningEventDao
 import com.musicstats.app.data.dao.MomentDao
 import com.musicstats.app.data.model.Moment
-import com.musicstats.app.data.model.MomentTier
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -20,11 +19,11 @@ class MomentDetector @Inject constructor(
 ) {
 
     companion object {
-        val SONG_PLAY_THRESHOLDS = listOf(10, 25, 50, 100, 250, 500)
-        val ARTIST_HOUR_THRESHOLDS_MS = listOf(1L, 5L, 10L, 24L).map { it * 3_600_000L }
-        val STREAK_THRESHOLDS = listOf(3, 7, 14, 30, 100)
+        val SONG_PLAY_THRESHOLDS = listOf(50, 100, 250, 500)
+        val ARTIST_HOUR_THRESHOLDS_MS = listOf(5L, 10L, 24L).map { it * 3_600_000L }
+        val STREAK_THRESHOLDS = listOf(7, 14, 30, 100)
         val TOTAL_HOUR_THRESHOLDS_MS = listOf(24L, 100L, 500L, 1000L).map { it * 3_600_000L }
-        val DISCOVERY_THRESHOLDS = listOf(50, 100, 250, 500)
+        val DISCOVERY_THRESHOLDS = listOf(100, 250, 500)
     }
 
     suspend fun detectAndPersistNewMoments(): List<Moment> {
@@ -82,9 +81,6 @@ class MomentDetector @Inject constructor(
                         "rank" to rank
                     )
                     val copy = MomentCopywriter.generate(type, song.artist, rawStats, copyVariant)
-                    val baseTier = MomentTier.tierFor(type)
-                    val isPersonalBest = copyVariant == 0
-                    val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
                     persistIfNew(Moment(
                         type = type,
                         entityKey = "${song.songId}:$threshold",
@@ -94,8 +90,6 @@ class MomentDetector @Inject constructor(
                         songId = song.songId,
                         statLines = copy.statLines,
                         imageUrl = song.albumArtUrl,
-                        tier = tier.name,
-                        isPersonalBest = isPersonalBest,
                         copyVariant = copyVariant
                     ))?.let { result += it }
                 }
@@ -120,9 +114,6 @@ class MomentDetector @Inject constructor(
                         "uniqueSongs" to uniqueSongs
                     )
                     val copy = MomentCopywriter.generate(type, artist.artist, rawStats, copyVariant)
-                    val baseTier = MomentTier.tierFor(type)
-                    val isPersonalBest = copyVariant == 0
-                    val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
                     persistIfNew(Moment(
                         type = type,
                         entityKey = "${artist.artist}:$hours",
@@ -133,8 +124,6 @@ class MomentDetector @Inject constructor(
                         statLines = copy.statLines,
                         imageUrl = artistEntity?.imageUrl,
                         entityName = artist.artist,
-                        tier = tier.name,
-                        isPersonalBest = isPersonalBest,
                         copyVariant = copyVariant
                     ))?.let { result += it }
                 }
@@ -160,9 +149,6 @@ class MomentDetector @Inject constructor(
                     "uniqueSongs" to uniqueSongs
                 )
                 val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-                val baseTier = MomentTier.tierFor(type)
-                val isPersonalBest = copyVariant == 0
-                val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
                 persistIfNew(Moment(
                     type = type,
                     entityKey = "$threshold",
@@ -170,8 +156,6 @@ class MomentDetector @Inject constructor(
                     title = copy.title,
                     description = copy.description,
                     statLines = copy.statLines,
-                    tier = tier.name,
-                    isPersonalBest = isPersonalBest,
                     copyVariant = copyVariant
                 ))?.let { result += it }
             }
@@ -194,9 +178,6 @@ class MomentDetector @Inject constructor(
                     "uniqueArtists" to uniqueArtists
                 )
                 val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-                val baseTier = MomentTier.tierFor(type)
-                val isPersonalBest = copyVariant == 0
-                val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
                 persistIfNew(Moment(
                     type = type,
                     entityKey = "$hours",
@@ -204,8 +185,6 @@ class MomentDetector @Inject constructor(
                     title = copy.title,
                     description = copy.description,
                     statLines = copy.statLines,
-                    tier = tier.name,
-                    isPersonalBest = isPersonalBest,
                     copyVariant = copyVariant
                 ))?.let { result += it }
             }
@@ -228,9 +207,6 @@ class MomentDetector @Inject constructor(
                     "totalHours" to totalHours
                 )
                 val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-                val baseTier = MomentTier.tierFor(type)
-                val isPersonalBest = copyVariant == 0
-                val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
                 persistIfNew(Moment(
                     type = type,
                     entityKey = "$threshold",
@@ -238,8 +214,6 @@ class MomentDetector @Inject constructor(
                     title = copy.title,
                     description = copy.description,
                     statLines = copy.statLines,
-                    tier = tier.name,
-                    isPersonalBest = isPersonalBest,
                     copyVariant = copyVariant
                 ))?.let { result += it }
             }
@@ -274,14 +248,11 @@ class MomentDetector @Inject constructor(
                 "peakLabel" to peakLabel
             )
             val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
                 type = type, entityKey = yearMonth, triggeredAt = now,
                 title = copy.title,
                 description = copy.description,
                 statLines = copy.statLines,
-                tier = tier.name,
-                isPersonalBest = false,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -296,14 +267,11 @@ class MomentDetector @Inject constructor(
                 "peakLabel" to "${peakMorningHour}am"
             )
             val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
                 type = type, entityKey = yearMonth, triggeredAt = now,
                 title = copy.title,
                 description = copy.description,
                 statLines = copy.statLines,
-                tier = tier.name,
-                isPersonalBest = false,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -318,14 +286,11 @@ class MomentDetector @Inject constructor(
                 "commuteDays" to "$commuteDays"
             )
             val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
                 type = type, entityKey = yearMonth, triggeredAt = now,
                 title = copy.title,
                 description = copy.description,
                 statLines = copy.statLines,
-                tier = tier.name,
-                isPersonalBest = false,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -342,14 +307,11 @@ class MomentDetector @Inject constructor(
                 "totalPlays" to "$totalPlays"
             )
             val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
                 type = type, entityKey = yearMonth, triggeredAt = now,
                 title = copy.title,
                 description = copy.description,
                 statLines = copy.statLines,
-                tier = tier.name,
-                isPersonalBest = false,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -362,14 +324,11 @@ class MomentDetector @Inject constructor(
                 "skipCount" to "$totalSkips"
             )
             val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
                 type = type, entityKey = yearMonth, triggeredAt = now,
                 title = copy.title,
                 description = copy.description,
                 statLines = copy.statLines,
-                tier = tier.name,
-                isPersonalBest = false,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -387,15 +346,12 @@ class MomentDetector @Inject constructor(
                 "duration" to deepCutDuration
             )
             val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
                 type = type, entityKey = yearMonth, triggeredAt = now,
                 title = copy.title,
                 description = copy.description,
                 statLines = copy.statLines,
                 imageUrl = deepCuts[0].albumArtUrl,
-                tier = tier.name,
-                isPersonalBest = false,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -414,7 +370,6 @@ class MomentDetector @Inject constructor(
                     "playCount" to "${topArtists[0].playCount}"
                 )
                 val copy = MomentCopywriter.generate(type, topArtists[0].artist, rawStats, copyVariant)
-                val tier = MomentTier.tierFor(type)
                 persistIfNew(Moment(
                     type = type, entityKey = yearMonth, triggeredAt = now,
                     title = copy.title,
@@ -423,8 +378,6 @@ class MomentDetector @Inject constructor(
                     statLines = copy.statLines,
                     imageUrl = artistEntity?.imageUrl,
                     entityName = topArtists[0].artist,
-                    tier = tier.name,
-                    isPersonalBest = false,
                     copyVariant = copyVariant
                 ))?.let { result += it }
             }
@@ -440,14 +393,11 @@ class MomentDetector @Inject constructor(
                 "newSongs" to "$newSongsThisWeek"
             )
             val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
                 type = type, entityKey = yearMonth, triggeredAt = now,
                 title = copy.title,
                 description = copy.description,
                 statLines = copy.statLines,
-                tier = tier.name,
-                isPersonalBest = false,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -466,14 +416,11 @@ class MomentDetector @Inject constructor(
                 "weekendHours" to "${weekendHoursPerWeek}h"
             )
             val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
                 type = type, entityKey = yearMonth, triggeredAt = now,
                 title = copy.title,
                 description = copy.description,
                 statLines = copy.statLines,
-                tier = tier.name,
-                isPersonalBest = false,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -492,14 +439,11 @@ class MomentDetector @Inject constructor(
                     "topArtistPct" to "${topArtistPct}%"
                 )
                 val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-                val tier = MomentTier.tierFor(type)
                 persistIfNew(Moment(
                     type = type, entityKey = yearMonth, triggeredAt = now,
                     title = copy.title,
                     description = copy.description,
                     statLines = copy.statLines,
-                    tier = tier.name,
-                    isPersonalBest = false,
                     copyVariant = copyVariant
                 ))?.let { result += it }
             }
@@ -520,7 +464,6 @@ class MomentDetector @Inject constructor(
                     "topSongLine" to "${topSong.title} \u00d7 ${topSong.playCount}"
                 )
                 val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-                val tier = MomentTier.tierFor(type)
                 persistIfNew(Moment(
                     type = type, entityKey = yearMonth, triggeredAt = now,
                     title = copy.title,
@@ -528,8 +471,6 @@ class MomentDetector @Inject constructor(
                     songId = topSong.songId,
                     statLines = copy.statLines,
                     imageUrl = topSong.albumArtUrl,
-                    tier = tier.name,
-                    isPersonalBest = false,
                     copyVariant = copyVariant
                 ))?.let { result += it }
             }
@@ -577,7 +518,6 @@ class MomentDetector @Inject constructor(
                 "avgPerRun" to "$avgRun"
             )
             val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
                 type = type, entityKey = yearMonth, triggeredAt = now,
                 title = copy.title,
@@ -585,8 +525,6 @@ class MomentDetector @Inject constructor(
                 songId = topSong?.songId,
                 statLines = copy.statLines,
                 imageUrl = topSong?.albumArtUrl,
-                tier = tier.name,
-                isPersonalBest = false,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -609,9 +547,6 @@ class MomentDetector @Inject constructor(
                     "allTimePlays" to "$allTimePlays"
                 )
                 val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-                val baseTier = MomentTier.tierFor(type)
-                val isPersonalBest = copyVariant == 0
-                val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
                 persistIfNew(Moment(
                     type = type,
                     entityKey = "${song.songId}:$todayDate",
@@ -621,8 +556,6 @@ class MomentDetector @Inject constructor(
                     songId = song.songId,
                     statLines = copy.statLines,
                     imageUrl = song.albumArtUrl,
-                    tier = tier.name,
-                    isPersonalBest = isPersonalBest,
                     copyVariant = copyVariant
                 ))?.let { result += it }
             }
@@ -647,9 +580,6 @@ class MomentDetector @Inject constructor(
                     "duration" to formatDuration(song.totalDurationMs)
                 )
                 val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-                val baseTier = MomentTier.tierFor(type)
-                val isPersonalBest = copyVariant == 0
-                val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
                 persistIfNew(Moment(
                     type = type,
                     entityKey = "${song.songId}:$detectedDate",
@@ -659,8 +589,6 @@ class MomentDetector @Inject constructor(
                     songId = song.songId,
                     statLines = copy.statLines,
                     imageUrl = song.albumArtUrl,
-                    tier = tier.name,
-                    isPersonalBest = isPersonalBest,
                     copyVariant = copyVariant
                 ))?.let { result += it }
             }
@@ -684,7 +612,6 @@ class MomentDetector @Inject constructor(
                     "playsThisWeek" to "$playsThisWeek"
                 )
                 val copy = MomentCopywriter.generate(type, artistStats.artist, rawStats, copyVariant)
-                val tier = MomentTier.tierFor(type)
                 persistIfNew(Moment(
                     type = type,
                     entityKey = "${artistStats.artist}:$weekKey",
@@ -695,8 +622,6 @@ class MomentDetector @Inject constructor(
                     statLines = copy.statLines,
                     imageUrl = artistEntity?.imageUrl,
                     entityName = artistStats.artist,
-                    tier = tier.name,
-                    isPersonalBest = false,
                     copyVariant = copyVariant
                 ))?.let { result += it }
             }
@@ -720,9 +645,6 @@ class MomentDetector @Inject constructor(
                     "ageLine" to "$ageDays days \u00b7 #$rank all-time"
                 )
                 val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-                val baseTier = MomentTier.tierFor(type)
-                val isPersonalBest = copyVariant == 0
-                val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
                 persistIfNew(Moment(
                     type = type,
                     entityKey = "${song.songId}",
@@ -732,8 +654,6 @@ class MomentDetector @Inject constructor(
                     songId = song.songId,
                     statLines = copy.statLines,
                     imageUrl = song.albumArtUrl,
-                    tier = tier.name,
-                    isPersonalBest = isPersonalBest,
                     copyVariant = copyVariant
                 ))?.let { result += it }
             }
@@ -755,9 +675,6 @@ class MomentDetector @Inject constructor(
                 "pbLabel" to "new personal best"
             )
             val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-            val baseTier = MomentTier.tierFor(type)
-            val isPersonalBest = true
-            val tier = MomentTier.bumped(baseTier)
             persistIfNew(Moment(
                 type = type,
                 entityKey = "$longestMs",
@@ -765,8 +682,6 @@ class MomentDetector @Inject constructor(
                 title = copy.title,
                 description = copy.description,
                 statLines = copy.statLines,
-                tier = tier.name,
-                isPersonalBest = isPersonalBest,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -790,9 +705,6 @@ class MomentDetector @Inject constructor(
                 "ageDays" to "$ageDays"
             )
             val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-            val baseTier = MomentTier.tierFor(type)
-            val isPersonalBest = copyVariant == 0
-            val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
             persistIfNew(Moment(
                 type = type,
                 entityKey = "${song.songId}",
@@ -802,8 +714,6 @@ class MomentDetector @Inject constructor(
                 songId = song.songId,
                 statLines = copy.statLines,
                 imageUrl = song.albumArtUrl,
-                tier = tier.name,
-                isPersonalBest = isPersonalBest,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -823,9 +733,6 @@ class MomentDetector @Inject constructor(
                 "newSongs" to "$newSongsCount"
             )
             val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-            val baseTier = MomentTier.tierFor(type)
-            val isPersonalBest = copyVariant == 0
-            val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
             persistIfNew(Moment(
                 type = type,
                 entityKey = weekKey,
@@ -833,8 +740,6 @@ class MomentDetector @Inject constructor(
                 title = copy.title,
                 description = copy.description,
                 statLines = copy.statLines,
-                tier = tier.name,
-                isPersonalBest = isPersonalBest,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -859,7 +764,6 @@ class MomentDetector @Inject constructor(
                     "playsToday" to "${song.playCount}"
                 )
                 val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-                val tier = MomentTier.tierFor(type)
                 persistIfNew(Moment(
                     type = type,
                     entityKey = "${song.songId}:$todayDate",
@@ -869,8 +773,6 @@ class MomentDetector @Inject constructor(
                     songId = song.songId,
                     statLines = copy.statLines,
                     imageUrl = song.albumArtUrl,
-                    tier = tier.name,
-                    isPersonalBest = false,
                     copyVariant = copyVariant
                 ))?.let { result += it }
             }
@@ -894,7 +796,6 @@ class MomentDetector @Inject constructor(
                     "songCount" to "$songCount"
                 )
                 val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-                val tier = MomentTier.tierFor(type)
                 persistIfNew(Moment(
                     type = type,
                     entityKey = dayNight.day,
@@ -902,8 +803,6 @@ class MomentDetector @Inject constructor(
                     title = copy.title,
                     description = copy.description,
                     statLines = copy.statLines,
-                    tier = tier.name,
-                    isPersonalBest = false,
                     copyVariant = copyVariant
                 ))?.let { result += it }
             }
@@ -928,7 +827,6 @@ class MomentDetector @Inject constructor(
                 "totalPlays" to "$totalPlaysThisWeek"
             )
             val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-            val tier = MomentTier.tierFor(type)
             persistIfNew(Moment(
                 type = type,
                 entityKey = weekKey,
@@ -938,8 +836,6 @@ class MomentDetector @Inject constructor(
                 songId = topSong.songId,
                 statLines = copy.statLines,
                 imageUrl = topSong.albumArtUrl,
-                tier = tier.name,
-                isPersonalBest = false,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -965,7 +861,6 @@ class MomentDetector @Inject constructor(
                     "playsThisWeek" to "$playsThisWeek"
                 )
                 val copy = MomentCopywriter.generate(type, artistStats.artist, rawStats, copyVariant)
-                val tier = MomentTier.tierFor(type)
                 persistIfNew(Moment(
                     type = type,
                     entityKey = "${artistStats.artist}:$weekKey",
@@ -976,8 +871,6 @@ class MomentDetector @Inject constructor(
                     statLines = copy.statLines,
                     imageUrl = artistEntity?.imageUrl,
                     entityName = artistStats.artist,
-                    tier = tier.name,
-                    isPersonalBest = false,
                     copyVariant = copyVariant
                 ))?.let { result += it }
             }
@@ -1006,9 +899,6 @@ class MomentDetector @Inject constructor(
                 "totalPlays" to "$totalPlays"
             )
             val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-            val baseTier = MomentTier.tierFor(type)
-            val isPersonalBest = copyVariant == 0
-            val tier = if (isPersonalBest) MomentTier.bumped(baseTier) else baseTier
             persistIfNew(Moment(
                 type = type,
                 entityKey = "${song.songId}:$weekKey",
@@ -1018,8 +908,6 @@ class MomentDetector @Inject constructor(
                 songId = song.songId,
                 statLines = copy.statLines,
                 imageUrl = song.albumArtUrl,
-                tier = tier.name,
-                isPersonalBest = isPersonalBest,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -1048,9 +936,6 @@ class MomentDetector @Inject constructor(
                 "songArtistLine" to "$songCount songs \u00b7 $artistCount artists"
             )
             val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
-            val baseTier = MomentTier.tierFor(type)
-            val isPersonalBest = true
-            val tier = MomentTier.bumped(baseTier)
             persistIfNew(Moment(
                 type = type,
                 entityKey = weekKey,
@@ -1058,8 +943,6 @@ class MomentDetector @Inject constructor(
                 title = copy.title,
                 description = copy.description,
                 statLines = copy.statLines,
-                tier = tier.name,
-                isPersonalBest = isPersonalBest,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
