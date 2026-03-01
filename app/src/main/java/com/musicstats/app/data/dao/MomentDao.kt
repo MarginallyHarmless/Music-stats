@@ -36,4 +36,7 @@ interface MomentDao {
 
     @Query("UPDATE moments SET imageUrl = (SELECT imageUrl FROM artists WHERE artists.id = moments.artistId) WHERE artistId IS NOT NULL AND imageUrl IS NULL")
     suspend fun backfillArtistImageUrls()
+
+    @Query("SELECT COUNT(*) FROM moments WHERE type = :type")
+    suspend fun countByType(type: String): Int
 }

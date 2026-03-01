@@ -21,5 +21,8 @@ data class Moment(
     val artistId: Long? = null,   // for artist image (nullable)
     val statLines: List<String> = emptyList(),
     val imageUrl: String? = null,
-    val entityName: String? = null
+    val entityName: String? = null,
+    val tier: String = "BRONZE",           // "BRONZE", "SILVER", or "GOLD"
+    val isPersonalBest: Boolean = false,
+    val copyVariant: Int = 0               // 0 = first time this type was triggered
 )

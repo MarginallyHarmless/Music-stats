@@ -18,7 +18,7 @@ import com.musicstats.app.data.model.Song
 @TypeConverters(Converters::class)
 @Database(
     entities = [Song::class, Artist::class, ListeningEvent::class, Moment::class],
-    version = 14,
+    version = 15,
     exportSchema = false
 )
 abstract class MusicStatsDatabase : RoomDatabase() {
@@ -188,6 +188,16 @@ abstract class MusicStatsDatabase : RoomDatabase() {
                 db.execSQL("DELETE FROM listening_events WHERE sourceApp = 'com.audible.application'")
                 db.execSQL("DELETE FROM songs WHERE id NOT IN (SELECT DISTINCT songId FROM listening_events)")
                 db.execSQL("DELETE FROM artists WHERE name NOT IN (SELECT DISTINCT artist FROM songs)")
+                db.execSQL("DELETE FROM moments")
+            }
+        }
+
+        val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE moments ADD COLUMN tier TEXT NOT NULL DEFAULT 'BRONZE'")
+                db.execSQL("ALTER TABLE moments ADD COLUMN isPersonalBest INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE moments ADD COLUMN copyVariant INTEGER NOT NULL DEFAULT 0")
+                // Wipe moments so they re-detect with new copy, tiers, and personal bests
                 db.execSQL("DELETE FROM moments")
             }
         }
