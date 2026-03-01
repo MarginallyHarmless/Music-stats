@@ -1,7 +1,21 @@
 package com.musicstats.app.data.model
 
+import androidx.compose.ui.graphics.Color
+
 enum class MomentTier {
     BRONZE, SILVER, GOLD;
+
+    val glowAlpha: Float get() = when (this) {
+        BRONZE -> 0.25f
+        SILVER -> 0.40f
+        GOLD -> 0.55f
+    }
+
+    val borderColors: List<Color>? get() = when (this) {
+        BRONZE -> null  // no border
+        SILVER -> listOf(Color(0xFF8E8E93), Color(0xFFD1D1D6), Color(0xFF8E8E93))
+        GOLD -> listOf(Color(0xFFFFD700), Color(0xFFFFF4B8), Color(0xFFDAA520), Color(0xFFFFD700))
+    }
 
     companion object {
         fun tierFor(type: String): MomentTier = when (type) {

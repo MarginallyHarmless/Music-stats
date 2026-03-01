@@ -1,6 +1,7 @@
 package com.musicstats.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.musicstats.app.data.model.Moment
+import com.musicstats.app.data.model.MomentTier
 import com.musicstats.app.ui.theme.LocalAlbumPalette
 import java.util.Locale
 
@@ -44,6 +46,9 @@ fun MomentCard(
 ) {
     val isUnseen = moment.seenAt == null
     val palette = LocalAlbumPalette.current
+    val tier = remember(moment.tier) {
+        try { MomentTier.valueOf(moment.tier) } catch (_: Exception) { MomentTier.BRONZE }
+    }
     val dateStr = remember(moment.triggeredAt) {
         java.time.Instant.ofEpochMilli(moment.triggeredAt)
             .atZone(java.time.ZoneId.systemDefault())
@@ -51,11 +56,16 @@ fun MomentCard(
             .format(java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault()))
     }
     val backgroundModel: Any? = moment.imageUrl ?: momentBackgroundDrawable(moment.type)
+    val borderModifier = tier.borderColors?.let { colors ->
+        val borderWidth = if (tier == MomentTier.GOLD) 2.dp else 1.5.dp
+        Modifier.border(borderWidth, Brush.linearGradient(colors), CardShape)
+    } ?: Modifier
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1f)
+            .then(borderModifier)
             .clip(CardShape)
             .clickable(onClick = onTap)
     ) {
@@ -75,7 +85,7 @@ fun MomentCard(
                     .background(
                         Brush.radialGradient(
                             colors = listOf(
-                                palette.accent.copy(alpha = 0.25f),
+                                palette.accent.copy(alpha = tier.glowAlpha),
                                 Color.Transparent
                             ),
                             center = Offset(0f, 0f),
@@ -99,6 +109,25 @@ fun MomentCard(
                 )
         )
 
+        // RARE badge for Gold cards
+        if (tier == MomentTier.GOLD) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color(0xFFFFD700).copy(alpha = 0.85f))
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = "RARE",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+            }
+        }
+
         // Layer 3: text anchored to bottom
         Column(
             modifier = Modifier
@@ -116,11 +145,19 @@ fun MomentCard(
                 )
                 Spacer(Modifier.height(4.dp))
             }
+            val titleColor = if (tier == MomentTier.GOLD) Color.Unspecified else Color.White
+            val titleStyle = if (tier == MomentTier.GOLD) {
+                MaterialTheme.typography.titleLarge.copy(
+                    brush = Brush.linearGradient(listOf(Color.White, Color(0xFFFFD700)))
+                )
+            } else {
+                MaterialTheme.typography.titleLarge
+            }
             Text(
                 text = moment.title,
-                style = MaterialTheme.typography.titleLarge,
+                style = titleStyle,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = titleColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -133,13 +170,18 @@ fun MomentCard(
                 overflow = TextOverflow.Ellipsis
             )
             if (moment.statLines.isNotEmpty()) {
+                val pillBackground = when (tier) {
+                    MomentTier.GOLD -> Color(0xFFFFD700).copy(alpha = 0.20f)
+                    MomentTier.SILVER -> palette.accent.copy(alpha = 0.20f)
+                    MomentTier.BRONZE -> Color.White.copy(alpha = 0.15f)
+                }
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     moment.statLines.forEach { stat ->
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(50))
-                                .background(Color.White.copy(alpha = 0.15f))
+                                .background(pillBackground)
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Text(
