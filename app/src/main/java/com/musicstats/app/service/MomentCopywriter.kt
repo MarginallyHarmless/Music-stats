@@ -312,6 +312,131 @@ object MomentCopywriter {
                 )
             }
 
+            // ── Narrative: Discovery Arcs ─────────────────────
+            type == "NARRATIVE_ORIGIN_STORY" -> {
+                val firstSong = rawStats["firstSong"]?.toString() ?: "a song"
+                val rank = rawStats["rank"]?.toString() ?: "?"
+                val daysAgo = rawStats["daysAgo"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "Origin Story",
+                    description = "You discovered $name through $firstSong, $daysAgo days ago. They just became your #$rank most-listened artist.",
+                    statLines = rawStats.toStatLines("uniqueSongs" to "%s songs", "totalHours" to "%sh total", "daysAgo" to "discovered %sd ago")
+                )
+            }
+            type == "NARRATIVE_GATEWAY" -> {
+                val firstSong = rawStats["firstSong"]?.toString() ?: "a song"
+                val topSong = rawStats["topSong"]?.toString() ?: "another song"
+                val ratio = rawStats["ratio"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "The Gateway",
+                    description = "$firstSong was your gateway to $name. But $topSong became your real favorite — ${ratio}× more plays.",
+                    statLines = rawStats.toStatLines("firstSong" to "first: %s", "topSongLine" to "favorite: %s")
+                )
+            }
+            type == "NARRATIVE_COLLECTION" -> {
+                val songCount = rawStats["songCount"]?.toString() ?: "?"
+                val firstSong = rawStats["firstSong"]?.toString() ?: "the beginning"
+                MomentCopy(
+                    title = "The Collection",
+                    description = "You've heard $songCount songs by $name — from $firstSong to the deep cuts.",
+                    statLines = rawStats.toStatLines("songCount" to "%s songs", "totalHours" to "%sh total", "daysAgo" to "first heard %sd ago")
+                )
+            }
+
+            // ── Narrative: Obsession Arcs ─────────────────────
+            type == "NARRATIVE_TAKEOVER" -> {
+                val daysAgo = rawStats["daysAgo"]?.toString() ?: "?"
+                val rank = rawStats["rank"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "The Takeover",
+                    description = "$daysAgo days ago, this didn't exist in your library. Now it's #$rank all-time.",
+                    statLines = rawStats.toStatLines("rank" to "#%s all-time", "playCount" to "%s plays", "daysAgo" to "%s days")
+                )
+            }
+            type == "NARRATIVE_SLOW_BUILD" -> {
+                val w1 = rawStats["w1"]?.toString() ?: "?"
+                val w2 = rawStats["w2"]?.toString() ?: "?"
+                val w3 = rawStats["w3"]?.toString() ?: "?"
+                val w4 = rawStats["w4"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "The Slow Build",
+                    description = "Week 1: $w1 plays. Week 2: $w2. Week 3: $w3. Week 4: $w4. You didn't binge it — you fell for it gradually.",
+                    statLines = rawStats.toStatLines("trajectory" to "%s")
+                )
+            }
+            type == "NARRATIVE_BINGE_AND_FADE" -> {
+                val bingePlays = rawStats["bingePlays"]?.toString() ?: "?"
+                val fadePlays = rawStats["fadePlays"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "Burned Bright",
+                    description = "$bingePlays plays in its first 2 weeks. In the weeks since? $fadePlays. Burned bright, burned fast.",
+                    statLines = rawStats.toStatLines("bingePlays" to "%s plays first 2 weeks", "fadePlays" to "%s plays since")
+                )
+            }
+
+            // ── Narrative: Comeback Arcs ──────────────────────
+            type == "NARRATIVE_FULL_CIRCLE" -> {
+                val gapDays = rawStats["gapDays"]?.toString() ?: "?"
+                val playsThisWeek = rawStats["playsThisWeek"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "Full Circle",
+                    description = "You hadn't touched $name in $gapDays days. This week: $playsThisWeek plays. Some things come back around.",
+                    statLines = rawStats.toStatLines("gapDays" to "%s days away", "playsThisWeek" to "%s plays this week")
+                )
+            }
+            type == "NARRATIVE_ONE_THAT_GOT_AWAY" -> {
+                val peakPlays = rawStats["peakPlays"]?.toString() ?: "?"
+                val peakMonth = rawStats["peakMonth"]?.toString() ?: "?"
+                val currentPlays = rawStats["currentPlays"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "The One That Got Away",
+                    description = "$name was your most-played in $peakMonth — $peakPlays plays. This month? Just $currentPlays.",
+                    statLines = rawStats.toStatLines("peakPlays" to "peak: %s plays", "currentPlays" to "now: %s plays")
+                )
+            }
+
+            // ── Narrative: Consistency Arcs ───────────────────
+            type == "NARRATIVE_SOUNDTRACK" -> {
+                val distinctDays = rawStats["distinctDays"]?.toString() ?: "?"
+                val monthSpan = rawStats["monthSpan"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "The Soundtrack",
+                    description = "This song has been with you for $monthSpan months. Played on $distinctDays different days.",
+                    statLines = rawStats.toStatLines("distinctDays" to "%s days", "monthSpan" to "%s months", "playCount" to "%s plays")
+                )
+            }
+
+            // ── Narrative: Session Arcs ───────────────────────
+            type == "NARRATIVE_RABBIT_HOLE" -> {
+                val songCount = rawStats["songCount"]?.toString() ?: "?"
+                val duration = rawStats["duration"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "The Rabbit Hole",
+                    description = "You went deep: $songCount $name songs back-to-back, $duration without coming up for air.",
+                    statLines = rawStats.toStatLines("songCount" to "%s songs", "duration" to "%s", "noInterrupt" to "%s")
+                )
+            }
+
+            // ── Narrative: Contrast Arcs ──────────────────────
+            type == "NARRATIVE_NIGHT_AND_DAY" -> {
+                val dayArtist = rawStats["dayArtist"]?.toString() ?: "?"
+                val nightArtist = rawStats["nightArtist"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "Night & Day",
+                    description = "By day: $dayArtist. After midnight: $nightArtist. Your 2am self has different taste.",
+                    statLines = rawStats.toStatLines("dayLine" to "day: %s", "nightLine" to "night: %s")
+                )
+            }
+            type == "NARRATIVE_PARALLEL_LIVES" -> {
+                val artist1 = rawStats["artist1"]?.toString() ?: "?"
+                val artist2 = rawStats["artist2"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "Parallel Lives",
+                    description = "$artist1 and $artist2 — you listen to both, but never in the same session. Zero overlap.",
+                    statLines = rawStats.toStatLines("artist1Line" to "%s", "artist2Line" to "%s", "overlap" to "%s")
+                )
+            }
+
             // Fallback for any unknown type
             else -> MomentCopy(
                 title = type.replace("_", " ").lowercase()
