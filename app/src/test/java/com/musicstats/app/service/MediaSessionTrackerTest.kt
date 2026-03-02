@@ -12,7 +12,10 @@ import java.io.File
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 
@@ -184,6 +187,73 @@ class MediaSessionTrackerTest {
                 albumArtUrl = any()
             )
         }
+    }
+
+    @Test
+    fun `watchdog auto-saves when position stops updating for 60 seconds`() = runTest {
+        coEvery { repository.recordPlay(any(), any(), any(), any(), any(), any(), any(), any()) } returns mockk()
+
+        val metadata = createMetadataWithDuration("Song", "Artist", 180_000L)
+        tracker.onMetadataChanged(metadata, "com.apple.music", scope)
+
+        // Start playing at position 0
+        val playState = createPlaybackStateWithPosition(PlaybackState.STATE_PLAYING, 0L)
+        tracker.onPlaybackStateChanged(playState, "com.apple.music", scope)
+
+        // Simulate position advancing to 50s (so duration will be >= 5s for save threshold)
+        val posUpdate = createPlaybackStateWithPosition(PlaybackState.STATE_PLAYING, 50_000L)
+        tracker.onPlaybackStateChanged(posUpdate, "com.apple.music", scope)
+
+        // Advance virtual time past two watchdog intervals (60s) — no more position updates
+        scope.advanceTimeBy(61_000L)
+        scope.runCurrent()
+
+        // Watchdog should have auto-saved and reset
+        coVerify(exactly = 1) {
+            repository.recordPlay(
+                title = "Song",
+                artist = "Artist",
+                album = any(),
+                sourceApp = "com.apple.music",
+                startedAt = any(),
+                durationMs = any(),
+                completed = any(),
+                albumArtUrl = any()
+            )
+        }
+
+        // isPlayingFlow should be false now
+        assertEquals(false, tracker.isPlayingFlow.value)
+    }
+
+    @Test
+    fun `watchdog does not auto-save when position keeps updating`() = runTest {
+        coEvery { repository.recordPlay(any(), any(), any(), any(), any(), any(), any(), any()) } returns mockk()
+
+        val metadata = createMetadataWithDuration("Song", "Artist", 300_000L)
+        tracker.onMetadataChanged(metadata, "com.spotify", scope)
+
+        val playState = createPlaybackStateWithPosition(PlaybackState.STATE_PLAYING, 0L)
+        tracker.onPlaybackStateChanged(playState, "com.spotify", scope)
+
+        // Simulate position updates every 20s (before 30s watchdog interval)
+        val baseRealtime = android.os.SystemClock.elapsedRealtime()
+        repeat(4) { i ->
+            scope.advanceTimeBy(20_000L)
+            val posUpdate = createPlaybackStateWithPosition(
+                PlaybackState.STATE_PLAYING,
+                (i + 1) * 20_000L,
+                updateTime = baseRealtime + (i + 1) * 20_000L
+            )
+            tracker.onPlaybackStateChanged(posUpdate, "com.spotify", scope)
+            scope.runCurrent()
+        }
+
+        // No auto-save should have happened — position was updating
+        coVerify(exactly = 0) { repository.recordPlay(any(), any(), any(), any(), any(), any(), any(), any()) }
+
+        // Still playing
+        assertEquals(true, tracker.isPlayingFlow.value)
     }
 
     @Test

@@ -8,6 +8,8 @@ import android.os.SystemClock
 import com.musicstats.app.data.repository.MusicRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,6 +48,7 @@ class MediaSessionTracker @Inject constructor(
     private var lastKnownPositionMs: Long? = null  // most recent reported position
     private var lastPositionUpdateRealtime: Long? = null // SystemClock.elapsedRealtime() of last position update
     private var lastPlaybackSpeed: Float = 1.0f
+    private var watchdogJob: Job? = null
 
     private fun extractTitle(metadata: MediaMetadata): String? {
         return metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
@@ -118,7 +121,38 @@ class MediaSessionTracker @Inject constructor(
         }
     }
 
-    private fun startTracking(state: PlaybackState?, overrideStartPosition: Long? = null) {
+    private fun launchWatchdog(scope: CoroutineScope) {
+        watchdogJob?.cancel()
+        watchdogJob = scope.launch {
+            var staleCount = 0
+            var previousUpdateTime = lastPositionUpdateRealtime
+            while (true) {
+                delay(WATCHDOG_INTERVAL_MS)
+                val currentUpdateTime = lastPositionUpdateRealtime
+                if (currentUpdateTime == previousUpdateTime) {
+                    staleCount++
+                    Log.d(TAG, "  Watchdog: no position update ($staleCount/$WATCHDOG_STALE_CHECKS)")
+                    DebugLog.log(DebugEventType.TRACKING, "Watchdog: stale $staleCount/$WATCHDOG_STALE_CHECKS")
+                    if (staleCount >= WATCHDOG_STALE_CHECKS) {
+                        Log.d(TAG, "  Watchdog: position stale for ${staleCount * WATCHDOG_INTERVAL_MS}ms, auto-saving")
+                        DebugLog.log(DebugEventType.TRACKING, "Watchdog: auto-save, position stale")
+                        synchronized(this@MediaSessionTracker) {
+                            if (isPlaying) {
+                                saveCurrentIfPlaying(scope)
+                                isPlaying = false
+                            }
+                        }
+                        break
+                    }
+                } else {
+                    staleCount = 0
+                    previousUpdateTime = currentUpdateTime
+                }
+            }
+        }
+    }
+
+    private fun startTracking(state: PlaybackState?, overrideStartPosition: Long? = null, scope: CoroutineScope? = null) {
         playStartTime = System.currentTimeMillis()
         updatePositionFromState(state)
         playStartPositionMs = overrideStartPosition ?: lastKnownPositionMs ?: 0L
@@ -126,9 +160,12 @@ class MediaSessionTracker @Inject constructor(
         _currentSessionStartMs.value = playStartTime!!
         Log.d(TAG, "  Started tracking: startTime=$playStartTime, startPosition=$playStartPositionMs")
         DebugLog.log(DebugEventType.TRACKING, "Started | startPos=$playStartPositionMs | lastKnown=$lastKnownPositionMs")
+        scope?.let { launchWatchdog(it) }
     }
 
     private fun resetTracking() {
+        watchdogJob?.cancel()
+        watchdogJob = null
         playStartTime = null
         playStartPositionMs = null
         lastKnownPositionMs = null
@@ -195,7 +232,7 @@ class MediaSessionTracker @Inject constructor(
             }
 
             if (isPlaying) {
-                startTracking(null, overrideStartPosition = positionBeforeReset)
+                startTracking(null, overrideStartPosition = positionBeforeReset, scope = scope)
             }
         }
     }
@@ -212,7 +249,7 @@ class MediaSessionTracker @Inject constructor(
             DebugLog.log(DebugEventType.STATE, "App switch via playback: $currentSourceApp -> $sourceApp")
             saveCurrentIfPlaying(scope)
             currentSourceApp = sourceApp
-            startTracking(state)
+            startTracking(state, scope = scope)
         } else {
             currentSourceApp = sourceApp
         }
@@ -221,7 +258,7 @@ class MediaSessionTracker @Inject constructor(
         DebugLog.log(DebugEventType.STATE, "$sourceApp | state=${state?.state} | pos=${state?.position} | $wasPlaying->$isPlaying | $currentTitle")
 
         if (isPlaying && !wasPlaying) {
-            startTracking(state)
+            startTracking(state, scope = scope)
         } else if (!isPlaying && wasPlaying) {
             // Only update position if it advances — don't accept pos=0 resets during skip transitions
             val incomingPos = state?.position ?: -1
@@ -243,7 +280,7 @@ class MediaSessionTracker @Inject constructor(
                     DebugLog.log(DebugEventType.TRACKING, "Track restart: pos ${prevPos}ms -> ${currentPos}ms")
                     saveCurrentIfPlaying(scope)
                     updatePositionFromState(state)
-                    startTracking(state)
+                    startTracking(state, scope = scope)
                 }
             } else {
                 updatePositionFromState(state)  // normal position update during playback
@@ -255,6 +292,8 @@ class MediaSessionTracker @Inject constructor(
         private const val REWIND_POSITION_THRESHOLD_MS = 3_000L  // position must be near start
         private const val REWIND_THRESHOLD_MS = 1_000L           // backward jump threshold
         private const val MAX_DURATION_MS = 30L * 60 * 1_000     // 30 minutes hard cap for wall-clock fallback
+        private const val WATCHDOG_INTERVAL_MS = 30_000L  // check every 30s
+        private const val WATCHDOG_STALE_CHECKS = 2        // 2 missed checks = 60s
     }
 
     @Synchronized
