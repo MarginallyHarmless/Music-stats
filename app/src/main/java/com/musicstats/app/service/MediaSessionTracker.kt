@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
-import android.os.SystemClock
 import com.musicstats.app.data.repository.MusicRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -47,7 +46,6 @@ class MediaSessionTracker @Inject constructor(
     private var playStartPositionMs: Long? = null  // media position when play started
     private var lastKnownPositionMs: Long? = null  // most recent reported position
     private var lastPositionUpdateRealtime: Long? = null // SystemClock.elapsedRealtime() of last position update
-    private var lastPlaybackSpeed: Float = 1.0f
     private var watchdogJob: Job? = null
 
     private fun extractTitle(metadata: MediaMetadata): String? {
@@ -68,37 +66,30 @@ class MediaSessionTracker @Inject constructor(
         if (pos >= 0) {
             lastKnownPositionMs = pos
             lastPositionUpdateRealtime = state.lastPositionUpdateTime
-            lastPlaybackSpeed = if (state.playbackSpeed > 0) state.playbackSpeed else 1.0f
         }
     }
 
     /**
-     * Estimate current media position by extrapolating from last known position.
-     */
-    private fun estimateCurrentPositionMs(): Long? {
-        val lastPos = lastKnownPositionMs ?: return null
-        val lastUpdate = lastPositionUpdateRealtime ?: return lastPos
-        val elapsed = SystemClock.elapsedRealtime() - lastUpdate
-        return lastPos + (elapsed * lastPlaybackSpeed).toLong()
-    }
-
-    /**
-     * Calculate played duration using position data when available, wall-clock as fallback.
+     * Calculate played duration.
+     * Uses position data when available, wall-clock as fallback.
+     * Result is capped at min(wall-clock, 150% media length) to prevent inflation.
      */
     private fun calculateDuration(): Long {
-        val startPos = playStartPositionMs
-        val currentPos = estimateCurrentPositionMs()
+        val startTime = playStartTime ?: return 0
+        val wallClockDuration = System.currentTimeMillis() - startTime
         val mediaDur = currentMediaDurationMs
         val maxByMedia = if (mediaDur != null && mediaDur > 0) (mediaDur * 1.5).toLong() else null
 
-        // Position-based: use media positions if both are available
+        // Position-based: use last reported positions directly (no extrapolation)
+        val startPos = playStartPositionMs
+        val currentPos = lastKnownPositionMs
         if (startPos != null && currentPos != null && currentPos >= startPos) {
             val positionDuration = currentPos - startPos
             Log.d(TAG, "  Duration from position: ${positionDuration}ms (startPos=$startPos, currentPos=$currentPos)")
             DebugLog.log(DebugEventType.TRACKING, "Duration: ${positionDuration}ms (position-based, start=$startPos, cur=$currentPos)")
-            // Cap position-based duration at 150% of media length when known
+            // Cap at media length when known
             if (maxByMedia != null && positionDuration > maxByMedia) {
-                Log.d(TAG, "  Capped position duration from ${positionDuration}ms to ${maxByMedia}ms (media=${mediaDur}ms)")
+                Log.d(TAG, "  Capped at media length: ${positionDuration}ms -> ${maxByMedia}ms")
                 DebugLog.log(DebugEventType.TRACKING, "Capped: ${positionDuration}ms -> ${maxByMedia}ms (media=${mediaDur}ms)")
                 return maxByMedia
             }
@@ -106,12 +97,10 @@ class MediaSessionTracker @Inject constructor(
         }
 
         // Fallback: wall-clock time
-        val startTime = playStartTime ?: return 0
-        val wallClockDuration = System.currentTimeMillis() - startTime
         Log.d(TAG, "  Duration from wall-clock (fallback): ${wallClockDuration}ms")
         DebugLog.log(DebugEventType.TRACKING, "Duration: ${wallClockDuration}ms (wall-clock fallback)")
 
-        // Apply cap to wall-clock fallback
+        // Cap wall-clock at media length or hard max
         return if (maxByMedia != null && wallClockDuration > maxByMedia) {
             maxByMedia
         } else if (wallClockDuration > MAX_DURATION_MS) {
@@ -170,7 +159,6 @@ class MediaSessionTracker @Inject constructor(
         playStartPositionMs = null
         lastKnownPositionMs = null
         lastPositionUpdateRealtime = null
-        lastPlaybackSpeed = 1.0f
         _isPlayingFlow.value = false
         _currentSessionStartMs.value = 0L
     }
