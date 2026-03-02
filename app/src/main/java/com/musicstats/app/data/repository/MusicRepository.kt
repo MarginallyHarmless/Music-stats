@@ -84,7 +84,7 @@ class MusicRepository @Inject constructor(
         }
 
         // Dedup: skip if a recent event for the same song already exists
-        val existing = eventDao.findBySongNearTime(songId, startedAt)
+        val existing = eventDao.findBySongNearTime(songId, startedAt, windowMs = 60_000L)
         if (existing != null) {
             Log.d("MusicRepository", "Skipping duplicate event for songId=$songId near startedAt=$startedAt")
             return existing

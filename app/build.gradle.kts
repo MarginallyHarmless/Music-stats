@@ -42,6 +42,10 @@ android {
         buildConfig = true
     }
 
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
     // Room schema export will be configured when Room entities are added.
     // The Room Gradle plugin and ksp room.schemaLocation both fail when the
     // project path contains spaces (KSP arg regex: \S+=\S+).

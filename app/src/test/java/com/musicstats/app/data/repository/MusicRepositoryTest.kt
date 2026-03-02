@@ -41,6 +41,7 @@ class MusicRepositoryTest {
         coEvery { artistDao.insert(any()) } returns 1L
         coEvery { songDao.findByTitleAndArtist("Song", "Artist") } returns null
         coEvery { songDao.insert(any()) } returns 10L
+        coEvery { eventDao.findBySongNearTime(any(), any(), any()) } returns null
         coEvery { eventDao.insert(any()) } returns 100L
 
         val event = repository.recordPlay(
@@ -65,6 +66,7 @@ class MusicRepositoryTest {
         val existingSong = Song(id = 10, title = "Song", artist = "Artist", firstHeardAt = 500L)
         coEvery { artistDao.findByName("Artist") } returns existingArtist
         coEvery { songDao.findByTitleAndArtist("Song", "Artist") } returns existingSong
+        coEvery { eventDao.findBySongNearTime(any(), any(), any()) } returns null
         coEvery { eventDao.insert(any()) } returns 100L
 
         val event = repository.recordPlay(
@@ -89,6 +91,7 @@ class MusicRepositoryTest {
         coEvery { artistDao.insert(any()) } returns 1L
         coEvery { songDao.findByTitleAndArtist("Song", "Artist") } returns null
         coEvery { songDao.insert(any()) } returns 10L
+        coEvery { eventDao.findBySongNearTime(any(), any(), any()) } returns null
         coEvery { eventDao.insert(any()) } returns 100L
 
         repository.recordPlay("Song", "Artist", null, "com.spotify", 1000L, 60_000L, true)
@@ -104,5 +107,20 @@ class MusicRepositoryTest {
         assertEquals(10L, event2.songId)
         // Song insert should only have been called once (first call)
         coVerify(exactly = 1) { songDao.insert(any()) }
+    }
+
+    @Test
+    fun `recordPlay deduplicates events within 60 second window`() = runTest {
+        val existingSong = Song(id = 10, title = "Song", artist = "Artist", firstHeardAt = 1000L)
+        val existingEvent = ListeningEvent(id = 100, songId = 10, startedAt = 1000L, durationMs = 60_000, sourceApp = "com.apple.music", completed = true)
+
+        coEvery { artistDao.findByName("Artist") } returns Artist(1, "Artist", 1000L)
+        coEvery { songDao.findByTitleAndArtist("Song", "Artist") } returns existingSong
+        coEvery { eventDao.findBySongNearTime(10L, 1030_000L, 60_000L) } returns existingEvent
+
+        val event = repository.recordPlay("Song", "Artist", null, "com.apple.music", 1030_000L, 60_000L, true)
+
+        assertEquals(100L, event.id)
+        coVerify(exactly = 0) { eventDao.insert(any()) }
     }
 }
