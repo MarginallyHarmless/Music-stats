@@ -44,12 +44,31 @@ class MediaSessionTrackerTest {
         every { metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) } returns null
         every { metadata.getBitmap(MediaMetadata.METADATA_KEY_ART) } returns null
         every { metadata.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON) } returns null
+        every { metadata.getLong(MediaMetadata.METADATA_KEY_DURATION) } returns 0L
+        return metadata
+    }
+
+    private fun createMetadataWithDuration(title: String, artist: String, durationMs: Long): MediaMetadata {
+        val metadata = createMetadata(title, artist)
+        every { metadata.getLong(MediaMetadata.METADATA_KEY_DURATION) } returns durationMs
         return metadata
     }
 
     private fun createPlaybackState(state: Int): PlaybackState {
         val playbackState = mockk<PlaybackState>()
         every { playbackState.state } returns state
+        every { playbackState.position } returns 0L
+        every { playbackState.lastPositionUpdateTime } returns android.os.SystemClock.elapsedRealtime()
+        every { playbackState.playbackSpeed } returns 1.0f
+        return playbackState
+    }
+
+    private fun createPlaybackStateWithPosition(state: Int, position: Long, updateTime: Long = android.os.SystemClock.elapsedRealtime()): PlaybackState {
+        val playbackState = mockk<PlaybackState>()
+        every { playbackState.state } returns state
+        every { playbackState.position } returns position
+        every { playbackState.lastPositionUpdateTime } returns updateTime
+        every { playbackState.playbackSpeed } returns 1.0f
         return playbackState
     }
 
@@ -57,8 +76,13 @@ class MediaSessionTrackerTest {
     fun `ignores metadata with null title`() = runTest {
         val metadata = mockk<MediaMetadata>()
         every { metadata.getString(MediaMetadata.METADATA_KEY_TITLE) } returns null
+        every { metadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE) } returns null
         every { metadata.getString(MediaMetadata.METADATA_KEY_ARTIST) } returns "Artist"
+        every { metadata.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST) } returns null
+        every { metadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE) } returns null
+        every { metadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_DESCRIPTION) } returns null
         every { metadata.getString(MediaMetadata.METADATA_KEY_ALBUM) } returns null
+        every { metadata.getLong(MediaMetadata.METADATA_KEY_DURATION) } returns 0L
 
         tracker.onMetadataChanged(metadata, "com.spotify", scope)
 
@@ -69,8 +93,13 @@ class MediaSessionTrackerTest {
     fun `ignores metadata with null artist`() = runTest {
         val metadata = mockk<MediaMetadata>()
         every { metadata.getString(MediaMetadata.METADATA_KEY_TITLE) } returns "Song"
+        every { metadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE) } returns null
         every { metadata.getString(MediaMetadata.METADATA_KEY_ARTIST) } returns null
+        every { metadata.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST) } returns null
+        every { metadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE) } returns null
+        every { metadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_DESCRIPTION) } returns null
         every { metadata.getString(MediaMetadata.METADATA_KEY_ALBUM) } returns null
+        every { metadata.getLong(MediaMetadata.METADATA_KEY_DURATION) } returns 0L
 
         tracker.onMetadataChanged(metadata, "com.spotify", scope)
 
@@ -122,5 +151,36 @@ class MediaSessionTrackerTest {
 
         // Should not crash, and should handle gracefully
         coVerify(exactly = 0) { repository.recordPlay(any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `duration is capped at 150 percent of media duration`() = runTest {
+        coEvery { repository.recordPlay(any(), any(), any(), any(), any(), any(), any(), any()) } returns mockk()
+
+        // Set up a 3-minute song (180_000ms)
+        val metadata = createMetadataWithDuration("Short Song", "Artist", 180_000L)
+        tracker.onMetadataChanged(metadata, "com.apple.music", scope)
+
+        // Start playing at position 0
+        val playState = createPlaybackStateWithPosition(PlaybackState.STATE_PLAYING, 0L)
+        tracker.onPlaybackStateChanged(playState, "com.apple.music", scope)
+
+        // Pause with position claiming 10 minutes (600_000ms) — way beyond the 3min song
+        val pauseState = createPlaybackStateWithPosition(PlaybackState.STATE_PAUSED, 600_000L)
+        tracker.onPlaybackStateChanged(pauseState, "com.apple.music", scope)
+
+        // Should record with duration capped at 180_000 * 1.5 = 270_000ms, NOT 600_000ms
+        coVerify {
+            repository.recordPlay(
+                title = "Short Song",
+                artist = "Artist",
+                album = any(),
+                sourceApp = "com.apple.music",
+                startedAt = any(),
+                durationMs = match { it <= 270_000L },
+                completed = any(),
+                albumArtUrl = any()
+            )
+        }
     }
 }
