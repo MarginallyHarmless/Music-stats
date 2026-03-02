@@ -269,10 +269,17 @@ class MediaSessionTracker @Inject constructor(
             }
             saveCurrentIfPlaying(scope)
         } else if (isPlaying && wasPlaying && playStartTime != null) {
-            // Detect track restart: position jumped backward significantly
             val currentPos = state?.position ?: return
             val prevPos = lastKnownPositionMs
-            if (prevPos != null && currentPos < prevPos - REWIND_THRESHOLD_MS && currentPos < REWIND_POSITION_THRESHOLD_MS) {
+            if (prevPos == null) {
+                // First position update after metadata-triggered re-track (startTracking(null)).
+                // Adopt this as the start position — it may be stale from the previous song.
+                updatePositionFromState(state)
+                playStartPositionMs = currentPos
+                Log.d(TAG, "  Adopted start position: ${currentPos}ms (first update after re-track)")
+                DebugLog.log(DebugEventType.TRACKING, "Adopted startPos=${currentPos}ms (first update after re-track)")
+            } else if (currentPos < prevPos - REWIND_THRESHOLD_MS && currentPos < REWIND_POSITION_THRESHOLD_MS) {
+                // Detect track restart: position jumped backward significantly
                 val duration = calculateDuration()
                 if (duration >= 5_000) {
                     Log.d(TAG, "  Track restart detected: position jumped from ${prevPos}ms to ${currentPos}ms")

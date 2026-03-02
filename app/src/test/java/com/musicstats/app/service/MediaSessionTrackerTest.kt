@@ -257,6 +257,47 @@ class MediaSessionTrackerTest {
     }
 
     @Test
+    fun `stale position after track change is adopted as start position`() = runTest {
+        coEvery { repository.recordPlay(any(), any(), any(), any(), any(), any(), any(), any()) } returns mockk()
+
+        // Song A plays, position reaches 120s
+        val metadataA = createMetadataWithDuration("Song A", "Artist", 240_000L)
+        tracker.onMetadataChanged(metadataA, "com.apple.music", scope)
+        val playState = createPlaybackStateWithPosition(PlaybackState.STATE_PLAYING, 0L)
+        tracker.onPlaybackStateChanged(playState, "com.apple.music", scope)
+        val posUpdate = createPlaybackStateWithPosition(PlaybackState.STATE_PLAYING, 120_000L)
+        tracker.onPlaybackStateChanged(posUpdate, "com.apple.music", scope)
+
+        // Metadata changes to Song B (skip) — saves Song A, resets, re-tracks with null state
+        val metadataB = createMetadataWithDuration("Song B", "Artist", 180_000L)
+        tracker.onMetadataChanged(metadataB, "com.apple.music", scope)
+
+        // Apple Music sends a STALE PlaybackState with Song A's position (120s)
+        val staleState = createPlaybackStateWithPosition(PlaybackState.STATE_PLAYING, 120_000L)
+        tracker.onPlaybackStateChanged(staleState, "com.apple.music", scope)
+
+        // Skip to Song C after a few seconds — triggers save of Song B
+        val metadataC = createMetadataWithDuration("Song C", "Artist", 200_000L)
+        tracker.onMetadataChanged(metadataC, "com.apple.music", scope)
+
+        // Song B should have a short duration (near 0), NOT 120s from the stale position
+        // The stale 120s position was adopted as start position, so duration = ~0
+        // With duration < 5s it should be rejected entirely
+        coVerify(exactly = 0) {
+            repository.recordPlay(
+                title = "Song B",
+                artist = any(),
+                album = any(),
+                sourceApp = any(),
+                startedAt = any(),
+                durationMs = any(),
+                completed = any(),
+                albumArtUrl = any()
+            )
+        }
+    }
+
+    @Test
     fun `duration is capped at 150 percent of media duration`() = runTest {
         coEvery { repository.recordPlay(any(), any(), any(), any(), any(), any(), any(), any()) } returns mockk()
 
