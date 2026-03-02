@@ -118,10 +118,10 @@ class MediaSessionTracker @Inject constructor(
         }
     }
 
-    private fun startTracking(state: PlaybackState?) {
+    private fun startTracking(state: PlaybackState?, overrideStartPosition: Long? = null) {
         playStartTime = System.currentTimeMillis()
         updatePositionFromState(state)
-        playStartPositionMs = lastKnownPositionMs ?: 0L
+        playStartPositionMs = overrideStartPosition ?: lastKnownPositionMs ?: 0L
         _isPlayingFlow.value = true
         _currentSessionStartMs.value = playStartTime!!
         Log.d(TAG, "  Started tracking: startTime=$playStartTime, startPosition=$playStartPositionMs")
@@ -167,6 +167,7 @@ class MediaSessionTracker @Inject constructor(
         if (title != currentTitle || artist != currentArtist) {
             Log.d(TAG, "  NEW track: $title by $artist")
             DebugLog.log(DebugEventType.METADATA, "NEW track: $title by $artist")
+            val positionBeforeReset = lastKnownPositionMs
             saveCurrentIfPlaying(scope)
             currentTitle = title
             currentArtist = artist
@@ -194,7 +195,7 @@ class MediaSessionTracker @Inject constructor(
             }
 
             if (isPlaying) {
-                startTracking(null)
+                startTracking(null, overrideStartPosition = positionBeforeReset)
             }
         }
     }

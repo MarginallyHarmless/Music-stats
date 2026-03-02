@@ -154,6 +154,39 @@ class MediaSessionTrackerTest {
     }
 
     @Test
+    fun `metadata track change preserves position for new track start`() = runTest {
+        coEvery { repository.recordPlay(any(), any(), any(), any(), any(), any(), any(), any()) } returns mockk()
+
+        // Play Song 1 with position data
+        val metadata1 = createMetadataWithDuration("Song 1", "Artist", 200_000L)
+        tracker.onMetadataChanged(metadata1, "com.spotify", scope)
+        val playState = createPlaybackStateWithPosition(PlaybackState.STATE_PLAYING, 0L)
+        tracker.onPlaybackStateChanged(playState, "com.spotify", scope)
+
+        // Simulate position advancing to 120s
+        val posUpdate = createPlaybackStateWithPosition(PlaybackState.STATE_PLAYING, 120_000L)
+        tracker.onPlaybackStateChanged(posUpdate, "com.spotify", scope)
+
+        // Metadata changes to Song 2 while playing — triggers save + re-track
+        val metadata2 = createMetadataWithDuration("Song 2", "Artist", 180_000L)
+        tracker.onMetadataChanged(metadata2, "com.spotify", scope)
+
+        // Song 1 should have been saved with ~120s duration (not inflated)
+        coVerify {
+            repository.recordPlay(
+                title = "Song 1",
+                artist = "Artist",
+                album = any(),
+                sourceApp = "com.spotify",
+                startedAt = any(),
+                durationMs = match { it in 100_000L..140_000L },
+                completed = any(),
+                albumArtUrl = any()
+            )
+        }
+    }
+
+    @Test
     fun `duration is capped at 150 percent of media duration`() = runTest {
         coEvery { repository.recordPlay(any(), any(), any(), any(), any(), any(), any(), any()) } returns mockk()
 
