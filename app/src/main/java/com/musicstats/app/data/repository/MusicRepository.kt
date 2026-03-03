@@ -47,17 +47,23 @@ class MusicRepository @Inject constructor(
         completed: Boolean,
         albumArtUrl: String? = null
     ): ListeningEvent {
+        val trimmedTitle = title.trim()
+        val trimmedArtist = artist.trim()
+        if (trimmedTitle.isEmpty() || trimmedArtist.isEmpty()) {
+            throw IllegalArgumentException("Title and artist must not be blank")
+        }
+
         // Upsert artist — insert is IGNORE so duplicates are silently skipped
-        val existingArtist = artistDao.findByName(artist)
+        val existingArtist = artistDao.findByName(trimmedArtist)
         if (existingArtist == null) {
-            artistDao.insert(Artist(name = artist, firstHeardAt = startedAt))
-            fetchArtistImage(artist)
+            artistDao.insert(Artist(name = trimmedArtist, firstHeardAt = startedAt))
+            fetchArtistImage(trimmedArtist)
         } else if (existingArtist.imageUrl == null) {
-            fetchArtistImage(artist)
+            fetchArtistImage(trimmedArtist)
         }
 
         // Upsert song — insert is IGNORE so duplicates are silently skipped
-        val existingSong = songDao.findByTitleAndArtist(title, artist)
+        val existingSong = songDao.findByTitleAndArtist(trimmedTitle, trimmedArtist)
         val songId = if (existingSong != null) {
             if (existingSong.albumArtUrl == null && albumArtUrl != null) {
                 songDao.updateAlbumArtUrl(existingSong.id, albumArtUrl)
@@ -66,8 +72,8 @@ class MusicRepository @Inject constructor(
             existingSong.id
         } else {
             val newId = songDao.insert(Song(
-                title = title,
-                artist = artist,
+                title = trimmedTitle,
+                artist = trimmedArtist,
                 album = album,
                 firstHeardAt = startedAt,
                 albumArtUrl = albumArtUrl
@@ -80,7 +86,7 @@ class MusicRepository @Inject constructor(
 
         // If no album art from media session, try Deezer as fallback
         if (albumArtUrl == null && (existingSong == null || existingSong.albumArtUrl == null)) {
-            fetchAlbumArt(songId, title, artist)
+            fetchAlbumArt(songId, trimmedTitle, trimmedArtist)
         }
 
         // Dedup: skip if a recent event for the same song already exists

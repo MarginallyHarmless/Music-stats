@@ -180,7 +180,7 @@ class MediaSessionTracker @Inject constructor(
 
         Log.d(TAG, "  title=$title, artist=$artist")
         DebugLog.log(DebugEventType.METADATA, "$sourceApp | $title by $artist | album=$album")
-        if (title == null || artist == null) return
+        if (title.isNullOrBlank() || artist.isNullOrBlank()) return
 
         // Different app taking over — save current play and switch
         if (sourceApp != currentSourceApp && currentSourceApp != null && isPlaying) {

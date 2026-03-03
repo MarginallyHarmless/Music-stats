@@ -323,6 +323,7 @@ interface ListeningEventDao {
                s.firstHeardAt
         FROM songs s
         LEFT JOIN listening_events le ON le.songId = s.id
+        WHERE TRIM(s.title) != '' AND TRIM(s.artist) != ''
         GROUP BY s.id
         ORDER BY s.title ASC
         """
@@ -341,6 +342,7 @@ interface ListeningEventDao {
         FROM artists a
         LEFT JOIN songs s ON s.artist = a.name
         LEFT JOIN listening_events le ON le.songId = s.id
+        WHERE TRIM(a.name) != ''
         GROUP BY a.name
         ORDER BY a.name ASC
     """)
