@@ -33,13 +33,13 @@ object MomentCopywriter {
         rawStats: Map<String, Any>,
         copyVariant: Int = 0
     ): MomentCopy {
-        val name = entityName ?: "this"
+        val name = entityName?.let { "**$it**" } ?: "this"
 
         return when {
             // ── Song Play Milestones ────────────────────────────
             type == "SONG_PLAYS_50" -> MomentCopy(
                 title = "Ride or Die",
-                description = "50 plays. This is a committed relationship at this point.",
+                description = "50 plays of $name. This is a committed relationship.",
                 statLines = buildSongMilestoneStats(rawStats)
             )
             type == "SONG_PLAYS_100" -> MomentCopy(
@@ -49,12 +49,12 @@ object MomentCopywriter {
             )
             type == "SONG_PLAYS_250" -> MomentCopy(
                 title = "Down Bad",
-                description = "250 plays. This isn't casual anymore.",
+                description = "250 plays of $name. This isn't casual anymore.",
                 statLines = buildSongMilestoneStats(rawStats)
             )
             type == "SONG_PLAYS_500" -> MomentCopy(
                 title = "Beyond Help",
-                description = "500 plays. This isn't a song anymore, it's a lifestyle.",
+                description = "$name at 500 plays. Not a song anymore — it's a lifestyle.",
                 statLines = buildSongMilestoneStats(rawStats)
             )
 
@@ -169,7 +169,7 @@ object MomentCopywriter {
             )
             type == "ARCHETYPE_DEEP_CUT_DIGGER" -> MomentCopy(
                 title = "Deep Cut Digger",
-                description = "You found a song and you played it into the ground. Respect.",
+                description = "You found $name and played it into the ground. Respect.",
                 statLines = rawStats.toStatLines("playCount" to "%s plays", "duration" to "%s total")
             )
             type == "ARCHETYPE_LOYAL_FAN" -> MomentCopy(
@@ -213,13 +213,13 @@ object MomentCopywriter {
                 val count = rawStats["playCountToday"]?.toString() ?: "5+"
                 MomentCopy(
                     title = "Today's Fixation",
-                    description = "You played this $count times today. The neighbors definitely know the lyrics.",
+                    description = "You played $name $count times today. The neighbors definitely know the lyrics.",
                     statLines = rawStats.toStatLines("playCountToday" to "%s plays today", "allTimePlays" to "%s all-time")
                 )
             }
             type == "DAILY_RITUAL" -> MomentCopy(
                 title = "Daily Ritual",
-                description = "7 days straight. This song is part of your routine now.",
+                description = "7 days straight with $name. Part of the routine now.",
                 statLines = rawStats.toStatLines("playCount" to "%s all-time plays", "duration" to "%s total")
             )
             type == "BREAKUP_CANDIDATE" -> {
@@ -235,7 +235,7 @@ object MomentCopywriter {
                 val days = rawStats["ageDays"]?.toString() ?: "?"
                 MomentCopy(
                     title = "Instant Classic",
-                    description = "$plays plays in $days days. This one didn't need time to grow on you.",
+                    description = "$name — $plays plays in $days days. Didn't need time to grow on you.",
                     statLines = rawStats.toStatLines("playCount" to "%s plays", "ageLine" to "%s")
                 )
             }
@@ -251,7 +251,7 @@ object MomentCopywriter {
                 val days = rawStats["ageDays"]?.toString() ?: "?"
                 MomentCopy(
                     title = "Love at First Listen",
-                    description = "Discovered $days days ago, already in your top 5. That was fast.",
+                    description = "$name — discovered $days days ago, already in your top 5. That was fast.",
                     statLines = rawStats.toStatLines("rank" to "#%s all-time", "ageLine" to "%s since discovered")
                 )
             }
@@ -267,7 +267,7 @@ object MomentCopywriter {
                 val days = rawStats["gapDays"]?.toString() ?: "30+"
                 MomentCopy(
                     title = "Back from the Dead",
-                    description = "$days days of silence. Then today happened. Welcome back.",
+                    description = "$days days without $name. Then today happened. Welcome back.",
                     statLines = rawStats.toStatLines("gapDays" to "%s days away", "playsToday" to "%s plays today")
                 )
             }
@@ -299,7 +299,7 @@ object MomentCopywriter {
                 val days = rawStats["ageDays"]?.toString() ?: "60+"
                 MomentCopy(
                     title = "Slow Burn",
-                    description = "$days days in your library before it clicked. Some things take time.",
+                    description = "$name sat in your library $days days before it clicked. Some things take time.",
                     statLines = rawStats.toStatLines("ageDays" to "%s days to click", "totalPlays" to "%s plays now")
                 )
             }
@@ -314,7 +314,7 @@ object MomentCopywriter {
 
             // ── Narrative: Discovery Arcs ─────────────────────
             type == "NARRATIVE_ORIGIN_STORY" -> {
-                val firstSong = rawStats["firstSong"]?.toString() ?: "a song"
+                val firstSong = rawStats["firstSong"]?.let { "**$it**" } ?: "a song"
                 val rank = rawStats["rank"]?.toString() ?: "?"
                 val daysAgo = rawStats["daysAgo"]?.toString() ?: "?"
                 MomentCopy(
@@ -324,8 +324,8 @@ object MomentCopywriter {
                 )
             }
             type == "NARRATIVE_GATEWAY" -> {
-                val firstSong = rawStats["firstSong"]?.toString() ?: "a song"
-                val topSong = rawStats["topSong"]?.toString() ?: "another song"
+                val firstSong = rawStats["firstSong"]?.let { "**$it**" } ?: "a song"
+                val topSong = rawStats["topSong"]?.let { "**$it**" } ?: "another song"
                 val ratio = rawStats["ratio"]?.toString() ?: "?"
                 MomentCopy(
                     title = "The Gateway",
@@ -335,7 +335,7 @@ object MomentCopywriter {
             }
             type == "NARRATIVE_COLLECTION" -> {
                 val songCount = rawStats["songCount"]?.toString() ?: "?"
-                val firstSong = rawStats["firstSong"]?.toString() ?: "the beginning"
+                val firstSong = rawStats["firstSong"]?.let { "**$it**" } ?: "the beginning"
                 MomentCopy(
                     title = "The Collection",
                     description = "You've heard $songCount songs by $name — from $firstSong to the deep cuts.",
@@ -349,7 +349,7 @@ object MomentCopywriter {
                 val rank = rawStats["rank"]?.toString() ?: "?"
                 MomentCopy(
                     title = "The Takeover",
-                    description = "$daysAgo days ago, this didn't exist in your library. Now it's #$rank all-time.",
+                    description = "$daysAgo days ago, $name didn't exist in your library. Now it's #$rank all-time.",
                     statLines = rawStats.toStatLines("rank" to "#%s all-time", "playCount" to "%s plays", "daysAgo" to "%s days")
                 )
             }
@@ -360,7 +360,7 @@ object MomentCopywriter {
                 val w4 = rawStats["w4"]?.toString() ?: "?"
                 MomentCopy(
                     title = "The Slow Build",
-                    description = "Week 1: $w1 plays. Week 2: $w2. Week 3: $w3. Week 4: $w4. You didn't binge it — you fell for it gradually.",
+                    description = "Week 1: $w1 plays. Week 2: $w2. Week 3: $w3. Week 4: $w4. You didn't binge $name — you fell for it gradually.",
                     statLines = rawStats.toStatLines("trajectory" to "%s")
                 )
             }
@@ -369,7 +369,7 @@ object MomentCopywriter {
                 val fadePlays = rawStats["fadePlays"]?.toString() ?: "?"
                 MomentCopy(
                     title = "Burned Bright",
-                    description = "$bingePlays plays in its first 2 weeks. In the weeks since? $fadePlays. Burned bright, burned fast.",
+                    description = "$name — $bingePlays plays in its first 2 weeks. In the weeks since? $fadePlays. Burned bright, burned fast.",
                     statLines = rawStats.toStatLines("bingePlays" to "%s plays first 2 weeks", "fadePlays" to "%s plays since")
                 )
             }
@@ -401,7 +401,7 @@ object MomentCopywriter {
                 val monthSpan = rawStats["monthSpan"]?.toString() ?: "?"
                 MomentCopy(
                     title = "The Soundtrack",
-                    description = "This song has been with you for $monthSpan months. Played on $distinctDays different days.",
+                    description = "$name has been with you for $monthSpan months. Played on $distinctDays different days.",
                     statLines = rawStats.toStatLines("distinctDays" to "%s days", "monthSpan" to "%s months", "playCount" to "%s plays")
                 )
             }
@@ -419,8 +419,8 @@ object MomentCopywriter {
 
             // ── Narrative: Contrast Arcs ──────────────────────
             type == "NARRATIVE_NIGHT_AND_DAY" -> {
-                val dayArtist = rawStats["dayArtist"]?.toString() ?: "?"
-                val nightArtist = rawStats["nightArtist"]?.toString() ?: "?"
+                val dayArtist = rawStats["dayArtist"]?.let { "**$it**" } ?: "?"
+                val nightArtist = rawStats["nightArtist"]?.let { "**$it**" } ?: "?"
                 MomentCopy(
                     title = "Night & Day",
                     description = "By day: $dayArtist. After midnight: $nightArtist. Your 2am self has different taste.",
@@ -428,8 +428,8 @@ object MomentCopywriter {
                 )
             }
             type == "NARRATIVE_PARALLEL_LIVES" -> {
-                val artist1 = rawStats["artist1"]?.toString() ?: "?"
-                val artist2 = rawStats["artist2"]?.toString() ?: "?"
+                val artist1 = rawStats["artist1"]?.let { "**$it**" } ?: "?"
+                val artist2 = rawStats["artist2"]?.let { "**$it**" } ?: "?"
                 MomentCopy(
                     title = "Parallel Lives",
                     description = "$artist1 and $artist2 — you listen to both, but never in the same session. Zero overlap.",

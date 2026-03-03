@@ -18,7 +18,7 @@ import com.musicstats.app.data.model.Song
 @TypeConverters(Converters::class)
 @Database(
     entities = [Song::class, Artist::class, ListeningEvent::class, Moment::class],
-    version = 15,
+    version = 16,
     exportSchema = false
 )
 abstract class MusicStatsDatabase : RoomDatabase() {
@@ -198,6 +198,13 @@ abstract class MusicStatsDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE moments ADD COLUMN isPersonalBest INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE moments ADD COLUMN copyVariant INTEGER NOT NULL DEFAULT 0")
                 // Wipe moments so they re-detect with new copy, tiers, and personal bests
+                db.execSQL("DELETE FROM moments")
+            }
+        }
+
+        // Wipe moments so they re-detect with entity names in descriptions
+        val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("DELETE FROM moments")
             }
         }

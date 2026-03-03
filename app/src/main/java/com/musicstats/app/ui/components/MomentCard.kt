@@ -26,8 +26,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.musicstats.app.data.model.Moment
@@ -111,6 +114,7 @@ fun MomentCard(
                 Text(
                     text = moment.entityName,
                     style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
                     color = Color.White.copy(alpha = 0.65f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -127,7 +131,7 @@ fun MomentCard(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = moment.description,
+                text = parseBoldMarkers(moment.description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.75f),
                 maxLines = 4,
@@ -182,3 +186,24 @@ fun MomentCard(
  * configured yet. Add entries here when custom background images are provided.
  */
 internal fun momentBackgroundDrawable(type: String): Int? = null
+
+/**
+ * Parses `**...**` markers in [text] and returns an [AnnotatedString] with bold spans.
+ */
+internal fun parseBoldMarkers(text: String): androidx.compose.ui.text.AnnotatedString {
+    return buildAnnotatedString {
+        var remaining = text
+        while (remaining.isNotEmpty()) {
+            val start = remaining.indexOf("**")
+            if (start == -1) { append(remaining); break }
+            append(remaining.substring(0, start))
+            remaining = remaining.substring(start + 2)
+            val end = remaining.indexOf("**")
+            if (end == -1) { append("**"); append(remaining); break }
+            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                append(remaining.substring(0, end))
+            }
+            remaining = remaining.substring(end + 2)
+        }
+    }
+}

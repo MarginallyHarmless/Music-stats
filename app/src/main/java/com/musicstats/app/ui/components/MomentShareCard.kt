@@ -131,6 +131,7 @@ fun MomentShareCard(
                 Text(
                     text = moment.entityName,
                     style = MaterialTheme.typography.titleSmall.copy(letterSpacing = 0.5.sp),
+                    fontWeight = FontWeight.Bold,
                     color = Color.White.copy(alpha = 0.60f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -147,7 +148,7 @@ fun MomentShareCard(
             )
             Spacer(Modifier.height(10.dp))
             Text(
-                text = moment.description,
+                text = parseBoldMarkers(moment.description),
                 style = MaterialTheme.typography.titleMedium.copy(lineHeight = 24.sp),
                 color = Color.White.copy(alpha = 0.75f),
                 maxLines = 4,
