@@ -469,6 +469,23 @@ object MomentCopywriter {
                     statLines = rawStats.toStatLines("artistALine" to "%s", "artistBLine" to "%s")
                 )
             }
+            type == "BEHAVIORAL_MAIN_CHARACTER" -> {
+                val duration = rawStats["todayDuration"]?.toString() ?: "?"
+                val rank = rawStats["rank"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "Main Character Energy",
+                    description = "$duration of music today. That's your #$rank biggest listening day ever.",
+                    statLines = rawStats.toStatLines("rank" to "#%s all-time", "todayDuration" to "%s today", "songCount" to "%s songs")
+                )
+            }
+            type == "BEHAVIORAL_ARTIST_MARATHON" -> {
+                val duration = rawStats["duration"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "The Marathon",
+                    description = "$duration of nothing but $name. No breaks, no distractions. Just dedication.",
+                    statLines = rawStats.toStatLines("duration" to "%s straight", "songCount" to "%s songs", "noInterrupt" to "%s")
+                )
+            }
 
             // Fallback for any unknown type
             else -> MomentCopy(
