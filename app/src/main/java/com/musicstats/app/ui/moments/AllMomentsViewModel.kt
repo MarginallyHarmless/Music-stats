@@ -318,6 +318,11 @@ class AllMomentsViewModel @Inject constructor(
                 "artistALine" to "${a0?.name ?: "Coldplay"}: 24 → 5 plays",
                 "artistBLine" to "${a1?.name ?: "Radiohead"}: 3 → 19 plays"),
             imageUrl = a1?.imageUrl ?: a0?.imageUrl ?: artistArt)
+        result += behavioralMoment(-114, "BEHAVIORAL_MAIN_CHARACTER", null,
+            mapOf("todayDuration" to "4h 37m", "rank" to "1", "songCount" to "89"))
+        result += behavioralMoment(-115, "BEHAVIORAL_ARTIST_MARATHON", a0?.name ?: "Radiohead",
+            mapOf("duration" to "2h 14m", "songCount" to "31", "noInterrupt" to "no interruptions"),
+            imageUrl = a0?.imageUrl ?: artistArt)
 
         return result
     }
