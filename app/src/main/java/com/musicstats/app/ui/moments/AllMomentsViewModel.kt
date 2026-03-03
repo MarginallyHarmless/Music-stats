@@ -173,7 +173,7 @@ class AllMomentsViewModel @Inject constructor(
             mapOf("skipPct" to "2.3%", "totalPlays" to "1,840"))
         result += archetypeMoment(-54, "ARCHETYPE_CERTIFIED_SKIPPER", null,
             mapOf("skipPct" to "47.8%", "skipCount" to "312"))
-        result += archetypeMoment(-55, "ARCHETYPE_DEEP_CUT_DIGGER", null,
+        result += archetypeMoment(-55, "ARCHETYPE_DEEP_CUT_DIGGER", s0?.title,
             mapOf("playCount" to "${s0?.playCount ?: 63}", "duration" to formatDuration(s0?.totalDurationMs ?: 19_200_000L)),
             songId = s0?.songId, imageUrl = s0?.albumArtUrl ?: songArt)
         result += archetypeMoment(-56, "ARCHETYPE_LOYAL_FAN", a0?.name,
@@ -185,7 +185,7 @@ class AllMomentsViewModel @Inject constructor(
             mapOf("weekendPct" to "68%", "weekendHours" to "4.2h"))
         result += archetypeMoment(-59, "ARCHETYPE_WIDE_TASTE", null,
             mapOf("uniqueArtists" to "47", "topArtistPct" to "8%"))
-        result += archetypeMoment(-60, "ARCHETYPE_REPEAT_OFFENDER", null,
+        result += archetypeMoment(-60, "ARCHETYPE_REPEAT_OFFENDER", s0?.title,
             mapOf("top3Pct" to "43%", "topSongLine" to "${s0?.title ?: "that song"} × ${s0?.playCount ?: 28}"),
             songId = s0?.songId, imageUrl = s0?.albumArtUrl ?: songArt)
         result += archetypeMoment(-61, "ARCHETYPE_ALBUM_LISTENER", null,
@@ -211,37 +211,37 @@ class AllMomentsViewModel @Inject constructor(
         }
 
         val dailyPlays = (s0?.playCount?.div(7))?.coerceAtLeast(5) ?: 8
-        result += behavioralMoment(-70, "OBSESSION_DAILY", null,
+        result += behavioralMoment(-70, "OBSESSION_DAILY", s0?.title,
             mapOf("playCountToday" to "$dailyPlays", "allTimePlays" to "${s0?.playCount ?: 312}"),
             songId = s0?.songId, imageUrl = s0?.albumArtUrl ?: songArt)
-        result += behavioralMoment(-71, "DAILY_RITUAL", null,
+        result += behavioralMoment(-71, "DAILY_RITUAL", s0?.title,
             mapOf("playCount" to "${s0?.playCount ?: 87}", "duration" to formatDuration(s0?.totalDurationMs ?: 18_000_000L)),
             songId = s0?.songId, imageUrl = s0?.albumArtUrl ?: songArt)
         result += behavioralMoment(-72, "BREAKUP_CANDIDATE", a1?.name,
             mapOf("skipCount" to "12", "playsThisWeek" to "3"),
             imageUrl = a1?.imageUrl ?: artistArt)
-        result += behavioralMoment(-73, "FAST_OBSESSION", null,
+        result += behavioralMoment(-73, "FAST_OBSESSION", s1?.title,
             mapOf("playCount" to "${s1?.playCount ?: 24}", "ageDays" to "12", "ageLine" to "12 days · #3 all-time"),
             songId = s1?.songId, imageUrl = s1?.albumArtUrl ?: songArt)
         result += behavioralMoment(-74, "LONGEST_SESSION", null,
             mapOf("sessionLabel" to "3h 12m", "pbLabel" to "new personal best"))
-        result += behavioralMoment(-75, "QUICK_OBSESSION", null,
+        result += behavioralMoment(-75, "QUICK_OBSESSION", s1?.title,
             mapOf("rank" to "4", "ageLine" to "5 days", "ageDays" to "5"),
             songId = s1?.songId, imageUrl = s1?.albumArtUrl ?: songArt)
         result += behavioralMoment(-76, "DISCOVERY_WEEK", null,
             mapOf("newArtists" to "9", "newSongs" to "23"))
-        result += behavioralMoment(-77, "RESURRECTION", null,
+        result += behavioralMoment(-77, "RESURRECTION", s2?.title,
             mapOf("gapDays" to "45", "playsToday" to "6"),
             songId = s2?.songId, imageUrl = s2?.albumArtUrl ?: songArt)
         result += behavioralMoment(-78, "NIGHT_BINGE", null,
             mapOf("duration" to "2h 18m", "songCount" to "34"))
-        result += behavioralMoment(-79, "COMFORT_ZONE", null,
+        result += behavioralMoment(-79, "COMFORT_ZONE", s0?.title,
             mapOf("top5Pct" to "84", "totalPlays" to "62"),
             songId = s0?.songId, imageUrl = s0?.albumArtUrl ?: songArt)
         result += behavioralMoment(-80, "REDISCOVERY", a1?.name,
             mapOf("gapDays" to "73", "playsThisWeek" to "8"),
             imageUrl = a1?.imageUrl ?: artistArt)
-        result += behavioralMoment(-81, "SLOW_BURN", null,
+        result += behavioralMoment(-81, "SLOW_BURN", s2?.title,
             mapOf("ageDays" to "91", "totalPlays" to "7"),
             songId = s2?.songId, imageUrl = s2?.albumArtUrl ?: songArt)
         result += behavioralMoment(-82, "MARATHON_WEEK", null,

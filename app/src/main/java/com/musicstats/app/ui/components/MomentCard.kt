@@ -135,17 +135,6 @@ fun MomentCard(
                 .align(Alignment.BottomStart)
                 .padding(horizontal = 20.dp, vertical = 20.dp)
         ) {
-            if (moment.entityName != null) {
-                Text(
-                    text = moment.entityName,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White.copy(alpha = 0.65f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.height(4.dp))
-            }
             Text(
                 text = moment.title,
                 style = MaterialTheme.typography.titleLarge,

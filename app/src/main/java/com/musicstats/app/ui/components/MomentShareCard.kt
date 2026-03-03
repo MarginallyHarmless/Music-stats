@@ -127,17 +127,6 @@ fun MomentShareCard(
                 .align(Alignment.BottomStart)
                 .padding(horizontal = 32.dp, vertical = 36.dp)
         ) {
-            if (moment.entityName != null) {
-                Text(
-                    text = moment.entityName,
-                    style = MaterialTheme.typography.titleSmall.copy(letterSpacing = 0.5.sp),
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White.copy(alpha = 0.60f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.height(6.dp))
-            }
             Text(
                 text = moment.title,
                 style = MaterialTheme.typography.headlineMedium,

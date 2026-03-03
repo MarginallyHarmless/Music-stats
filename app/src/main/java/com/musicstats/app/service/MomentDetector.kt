@@ -363,13 +363,14 @@ class MomentDetector @Inject constructor(
                 "playCount" to "${deepCuts[0].playCount}",
                 "duration" to deepCutDuration
             )
-            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            val copy = MomentCopywriter.generate(type, deepCuts[0].title, rawStats, copyVariant)
             persistIfNew(Moment(
                 type = type, entityKey = yearMonth, triggeredAt = now,
                 title = copy.title,
                 description = copy.description,
                 statLines = copy.statLines,
                 imageUrl = deepCuts[0].albumArtUrl,
+                entityName = deepCuts[0].title,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -564,7 +565,7 @@ class MomentDetector @Inject constructor(
                     "playCountToday" to "${song.playCount}",
                     "allTimePlays" to "$allTimePlays"
                 )
-                val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+                val copy = MomentCopywriter.generate(type, song.title, rawStats, copyVariant)
                 persistIfNew(Moment(
                     type = type,
                     entityKey = "${song.songId}:$todayDate",
@@ -574,6 +575,7 @@ class MomentDetector @Inject constructor(
                     songId = song.songId,
                     statLines = copy.statLines,
                     imageUrl = song.albumArtUrl,
+                    entityName = song.title,
                     copyVariant = copyVariant
                 ))?.let { result += it }
             }
@@ -597,7 +599,7 @@ class MomentDetector @Inject constructor(
                     "playCount" to "${song.playCount}",
                     "duration" to formatDuration(song.totalDurationMs)
                 )
-                val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+                val copy = MomentCopywriter.generate(type, song.title, rawStats, copyVariant)
                 persistIfNew(Moment(
                     type = type,
                     entityKey = "${song.songId}:$detectedDate",
@@ -607,6 +609,7 @@ class MomentDetector @Inject constructor(
                     songId = song.songId,
                     statLines = copy.statLines,
                     imageUrl = song.albumArtUrl,
+                    entityName = song.title,
                     copyVariant = copyVariant
                 ))?.let { result += it }
             }
@@ -662,7 +665,7 @@ class MomentDetector @Inject constructor(
                     "ageDays" to "$ageDays",
                     "ageLine" to "$ageDays days \u00b7 #$rank all-time"
                 )
-                val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+                val copy = MomentCopywriter.generate(type, song.title, rawStats, copyVariant)
                 persistIfNew(Moment(
                     type = type,
                     entityKey = "${song.songId}",
@@ -672,6 +675,7 @@ class MomentDetector @Inject constructor(
                     songId = song.songId,
                     statLines = copy.statLines,
                     imageUrl = song.albumArtUrl,
+                    entityName = song.title,
                     copyVariant = copyVariant
                 ))?.let { result += it }
             }
@@ -722,7 +726,7 @@ class MomentDetector @Inject constructor(
                 "ageLine" to "$ageDays days",
                 "ageDays" to "$ageDays"
             )
-            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            val copy = MomentCopywriter.generate(type, song.title, rawStats, copyVariant)
             persistIfNew(Moment(
                 type = type,
                 entityKey = "${song.songId}",
@@ -732,6 +736,7 @@ class MomentDetector @Inject constructor(
                 songId = song.songId,
                 statLines = copy.statLines,
                 imageUrl = song.albumArtUrl,
+                entityName = song.title,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -781,7 +786,7 @@ class MomentDetector @Inject constructor(
                     "gapDays" to "$gapDays",
                     "playsToday" to "${song.playCount}"
                 )
-                val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+                val copy = MomentCopywriter.generate(type, song.title, rawStats, copyVariant)
                 persistIfNew(Moment(
                     type = type,
                     entityKey = "${song.songId}:$todayDate",
@@ -791,6 +796,7 @@ class MomentDetector @Inject constructor(
                     songId = song.songId,
                     statLines = copy.statLines,
                     imageUrl = song.albumArtUrl,
+                    entityName = song.title,
                     copyVariant = copyVariant
                 ))?.let { result += it }
             }
@@ -916,7 +922,7 @@ class MomentDetector @Inject constructor(
                 "ageDays" to "$ageDays",
                 "totalPlays" to "$totalPlays"
             )
-            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            val copy = MomentCopywriter.generate(type, songDetails.title, rawStats, copyVariant)
             persistIfNew(Moment(
                 type = type,
                 entityKey = "${song.songId}:$weekKey",
@@ -926,6 +932,7 @@ class MomentDetector @Inject constructor(
                 songId = song.songId,
                 statLines = copy.statLines,
                 imageUrl = song.albumArtUrl,
+                entityName = songDetails.title,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -1114,6 +1121,7 @@ class MomentDetector @Inject constructor(
                 songId = song.songId,
                 statLines = copy.statLines,
                 imageUrl = song.albumArtUrl,
+                entityName = song.title,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -1155,6 +1163,7 @@ class MomentDetector @Inject constructor(
                 songId = song.songId,
                 statLines = copy.statLines,
                 imageUrl = song.albumArtUrl,
+                entityName = song.title,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -1195,6 +1204,7 @@ class MomentDetector @Inject constructor(
                 songId = song.songId,
                 statLines = copy.statLines,
                 imageUrl = song.albumArtUrl,
+                entityName = song.title,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
@@ -1320,6 +1330,7 @@ class MomentDetector @Inject constructor(
                 songId = song.songId,
                 statLines = copy.statLines,
                 imageUrl = song.albumArtUrl,
+                entityName = song.title,
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
