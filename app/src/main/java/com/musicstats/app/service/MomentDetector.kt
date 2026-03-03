@@ -62,6 +62,7 @@ class MomentDetector @Inject constructor(
         newMoments += detectTasteDriftAndLockedIn(now)
         newMoments += detectReplacement(now)
         newMoments += detectMainCharacter(todayStart, now)
+        newMoments += detectArtistMarathon(todayStart, now)
 
         // Clean up any stale narrative moments with "?" from key mismatches
         momentDao.deleteStaleByTypePattern("NARRATIVE_%")
@@ -1760,6 +1761,78 @@ class MomentDetector @Inject constructor(
         ))?.let { result += it }
 
         return result
+    }
+
+    private suspend fun detectArtistMarathon(todayStart: Long, now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val twoHoursMs = 7_200_000L
+
+        // Get today's events ordered by time
+        val events = eventDao.getOrderedSongArtistEventsSuspend(todayStart)
+        if (events.isEmpty()) return result
+
+        // Group consecutive events by artist
+        var currentArtist = events[0].artist
+        var currentDuration = events[0].durationMs
+        var currentCount = 1
+
+        for (i in 1 until events.size) {
+            val event = events[i]
+            if (event.artist == currentArtist) {
+                currentDuration += event.durationMs
+                currentCount++
+            } else {
+                // Check if the completed run qualifies
+                if (currentDuration >= twoHoursMs) {
+                    emitMarathonMoment(currentArtist, currentDuration, currentCount, now)
+                        ?.let { result += it }
+                }
+                currentArtist = event.artist
+                currentDuration = event.durationMs
+                currentCount = 1
+            }
+        }
+        // Check the last group
+        if (currentDuration >= twoHoursMs) {
+            emitMarathonMoment(currentArtist, currentDuration, currentCount, now)
+                ?.let { result += it }
+        }
+
+        return result
+    }
+
+    private suspend fun emitMarathonMoment(
+        artist: String, durationMs: Long, songCount: Int, now: Long
+    ): Moment? {
+        val todayDate = LocalDate.now(ZoneId.systemDefault()).toString()
+        val type = "BEHAVIORAL_ARTIST_MARATHON"
+        val entityKey = "marathon_${artist}:$todayDate"
+        if (momentDao.existsByTypeAndKey(type, entityKey)) return null
+
+        val hours = durationMs / 3_600_000L
+        val mins = (durationMs % 3_600_000L) / 60_000L
+        val durationLabel = if (hours > 0) "${hours}h ${mins}m" else "${mins}m"
+
+        val artistEntity = artistDao.findByName(artist)
+        val copyVariant = momentDao.countByType(type)
+        val rawStats = mapOf<String, Any>(
+            "duration" to durationLabel,
+            "songCount" to "$songCount",
+            "noInterrupt" to "no interruptions"
+        )
+        val copy = MomentCopywriter.generate(type, artist, rawStats, copyVariant)
+        return persistIfNew(Moment(
+            type = type,
+            entityKey = entityKey,
+            triggeredAt = now,
+            title = copy.title,
+            description = copy.description,
+            artistId = artistEntity?.id,
+            statLines = copy.statLines,
+            imageUrl = artistEntity?.imageUrl,
+            entityName = artist,
+            copyVariant = copyVariant
+        ))
     }
 
     private fun startOfDay(epochMs: Long): Long {
