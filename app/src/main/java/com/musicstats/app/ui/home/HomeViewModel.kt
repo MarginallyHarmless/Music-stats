@@ -10,6 +10,7 @@ import com.musicstats.app.data.repository.MomentsRepository
 import com.musicstats.app.data.repository.MusicRepository
 import com.musicstats.app.service.MediaSessionTracker
 import com.musicstats.app.service.MomentDetector
+import com.musicstats.app.service.MomentPriority
 import com.musicstats.app.service.MomentReleaseScheduler
 import com.musicstats.app.service.MomentWorker
 import com.musicstats.app.util.daysAgo
@@ -113,6 +114,15 @@ class HomeViewModel @Inject constructor(
         momentsRepository.getUnseenCount()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    val momentGateState: StateFlow<MomentGateState> =
+        momentsRepository.getTotalListeningTimeMs()
+            .map { totalMs ->
+                val hours = totalMs / 3_600_000f
+                if (hours >= MomentPriority.GATE_HOURS) MomentGateState.Unlocked
+                else MomentGateState.Locked(hours)
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MomentGateState.Locked(0f))
+
     fun detectMomentsOnOpen() {
         viewModelScope.launch(Dispatchers.IO) {
             momentDetector.detectAndPersistNewMoments()
@@ -168,3 +178,8 @@ data class TopArtistInfo(
     val playCount: Int = 0,
     val totalDurationMs: Long = 0L
 )
+
+sealed class MomentGateState {
+    data class Locked(val progressHours: Float) : MomentGateState()
+    data object Unlocked : MomentGateState()
+}
