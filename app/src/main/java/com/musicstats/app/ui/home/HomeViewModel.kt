@@ -10,6 +10,7 @@ import com.musicstats.app.data.repository.MomentsRepository
 import com.musicstats.app.data.repository.MusicRepository
 import com.musicstats.app.service.MediaSessionTracker
 import com.musicstats.app.service.MomentDetector
+import com.musicstats.app.service.MomentReleaseScheduler
 import com.musicstats.app.service.MomentWorker
 import com.musicstats.app.util.daysAgo
 import com.musicstats.app.util.startOfToday
@@ -35,7 +36,8 @@ class HomeViewModel @Inject constructor(
     val mediaSessionTracker: MediaSessionTracker,
     @ApplicationContext private val context: Context,
     private val momentDetector: MomentDetector,
-    private val momentsRepository: MomentsRepository
+    private val momentsRepository: MomentsRepository,
+    private val releaseScheduler: MomentReleaseScheduler
 ) : ViewModel() {
 
     val greeting: String
@@ -114,6 +116,7 @@ class HomeViewModel @Inject constructor(
     fun detectMomentsOnOpen() {
         viewModelScope.launch(Dispatchers.IO) {
             momentDetector.detectAndPersistNewMoments()
+            releaseScheduler.releaseNext()
         }
     }
 

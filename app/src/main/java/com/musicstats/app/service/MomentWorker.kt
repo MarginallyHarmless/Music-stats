@@ -23,13 +23,17 @@ import java.util.concurrent.TimeUnit
 class MomentWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val detector: MomentDetector
+    private val detector: MomentDetector,
+    private val releaseScheduler: MomentReleaseScheduler
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         return try {
-            val newMoments = detector.detectAndPersistNewMoments()
-            newMoments.forEach { fireNotification(it) }
+            detector.detectAndPersistNewMoments()
+            val released = releaseScheduler.releaseNext()
+            if (released != null && MomentPriority.shouldNotify(MomentPriority.tierOf(released.type))) {
+                fireNotification(released)
+            }
             Result.success()
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
