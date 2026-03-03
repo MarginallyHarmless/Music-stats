@@ -836,4 +836,150 @@ interface ListeningEventDao {
         GROUP BY day
     """)
     suspend fun getAfterHoursListeningByDaySuspend(since: Long): List<DayNightListening>
+
+    // --- Challenge Generator queries ---
+
+    // New songs discovered between two timestamps
+    @Query("SELECT COUNT(*) FROM songs WHERE firstHeardAt >= :from AND firstHeardAt < :until")
+    suspend fun getNewSongsDiscoveredBetweenSuspend(from: Long, until: Long): Int
+
+    // New artists discovered between two timestamps
+    @Query("SELECT COUNT(*) FROM artists WHERE firstHeardAt >= :from AND firstHeardAt < :until")
+    suspend fun getNewArtistsDiscoveredBetweenSuspend(from: Long, until: Long): Int
+
+    // Total events (completed + skipped) in a period
+    @Query("SELECT COUNT(*) FROM listening_events WHERE startedAt >= :from AND startedAt < :until")
+    suspend fun getTotalEventCountBetweenSuspend(from: Long, until: Long): Int
+
+    // Skip count in a period
+    @Query("SELECT COUNT(*) FROM listening_events WHERE completed = 0 AND startedAt >= :from AND startedAt < :until")
+    suspend fun getSkipCountBetweenSuspend(from: Long, until: Long): Int
+
+    // Completed play count in a period
+    @Query("SELECT COUNT(*) FROM listening_events WHERE completed = 1 AND startedAt >= :from AND startedAt < :until")
+    suspend fun getPlayCountBetweenSuspend(from: Long, until: Long): Int
+
+    // Unique artist count in a period
+    @Query("""
+        SELECT COUNT(DISTINCT s.artist) FROM listening_events e
+        JOIN songs s ON e.songId = s.id
+        WHERE e.completed = 1 AND e.startedAt >= :from AND e.startedAt < :until
+    """)
+    suspend fun getUniqueArtistCountBetweenSuspend(from: Long, until: Long): Int
+
+    // Unique song count in a period
+    @Query("""
+        SELECT COUNT(DISTINCT e.songId) FROM listening_events e
+        WHERE e.completed = 1 AND e.startedAt >= :from AND e.startedAt < :until
+    """)
+    suspend fun getUniqueSongCountBetweenSuspend(from: Long, until: Long): Int
+
+    // Days with listening activity in a period
+    @Query("""
+        SELECT COUNT(DISTINCT strftime('%Y-%m-%d', startedAt / 1000, 'unixepoch', 'localtime'))
+        FROM listening_events
+        WHERE completed = 1 AND startedAt >= :from AND startedAt < :until
+    """)
+    suspend fun getDaysWithListeningBetweenSuspend(from: Long, until: Long): Int
+
+    // Average daily listening ms in a period
+    @Query("""
+        SELECT COALESCE(
+            SUM(durationMs) / NULLIF(COUNT(DISTINCT strftime('%Y-%m-%d', startedAt / 1000, 'unixepoch', 'localtime')), 0),
+            0
+        )
+        FROM listening_events
+        WHERE completed = 1 AND startedAt >= :from AND startedAt < :until
+    """)
+    suspend fun getAvgDailyListeningMsBetweenSuspend(from: Long, until: Long): Long
+
+    // Listening time in a period (suspend)
+    @Query("SELECT COALESCE(SUM(durationMs), 0) FROM listening_events WHERE startedAt >= :from AND startedAt < :until")
+    suspend fun getListeningTimeBetweenSuspend(from: Long, until: Long): Long
+
+    // Longest session in a period
+    @Query("SELECT COALESCE(MAX(durationMs), 0) FROM listening_events WHERE completed = 1 AND startedAt >= :from AND startedAt < :until")
+    suspend fun getLongestSessionBetweenSuspend(from: Long, until: Long): Long
+
+    // Hourly listening in a period (for time-of-day analysis)
+    @Query("""
+        SELECT CAST(strftime('%H', startedAt / 1000, 'unixepoch', 'localtime') AS INTEGER) AS hour,
+               SUM(durationMs) AS totalDurationMs,
+               COUNT(*) AS eventCount
+        FROM listening_events
+        WHERE completed = 1 AND startedAt >= :from AND startedAt < :until
+        GROUP BY hour
+    """)
+    suspend fun getHourlyListeningBetweenSuspend(from: Long, until: Long): List<HourlyListening>
+
+    // Weekend listening in a period
+    @Query("""
+        SELECT COALESCE(SUM(durationMs), 0) FROM listening_events
+        WHERE completed = 1 AND startedAt >= :from AND startedAt < :until
+        AND CAST(strftime('%w', startedAt / 1000, 'unixepoch', 'localtime') AS INTEGER) IN (0, 6)
+    """)
+    suspend fun getWeekendListeningMsBetweenSuspend(from: Long, until: Long): Long
+
+    // Weekday listening in a period
+    @Query("""
+        SELECT COALESCE(SUM(durationMs), 0) FROM listening_events
+        WHERE completed = 1 AND startedAt >= :from AND startedAt < :until
+        AND CAST(strftime('%w', startedAt / 1000, 'unixepoch', 'localtime') AS INTEGER) NOT IN (0, 6)
+    """)
+    suspend fun getWeekdayListeningMsBetweenSuspend(from: Long, until: Long): Long
+
+    // Distinct source apps in a period
+    @Query("""
+        SELECT DISTINCT sourceApp FROM listening_events
+        WHERE startedAt >= :from AND startedAt < :until
+    """)
+    suspend fun getDistinctSourceAppsBetweenSuspend(from: Long, until: Long): List<String>
+
+    // Songs with high all-time play count but no plays in a recent period
+    @Query("""
+        SELECT e.songId, s.title, s.artist, s.albumArtUrl,
+               COALESCE(SUM(e.durationMs), 0) AS totalDurationMs,
+               COUNT(CASE WHEN e.completed = 1 THEN 1 END) AS playCount
+        FROM listening_events e
+        JOIN songs s ON e.songId = s.id
+        WHERE e.completed = 1
+        GROUP BY e.songId
+        HAVING playCount >= :minPlays
+        AND e.songId NOT IN (
+            SELECT DISTINCT songId FROM listening_events
+            WHERE completed = 1 AND startedAt >= :since
+        )
+        ORDER BY playCount DESC
+        LIMIT :limit
+    """)
+    suspend fun getSongsNotPlayedSince(minPlays: Int, since: Long, limit: Int): List<SongPlayStats>
+
+    // Top songs by play count in a period
+    @Query("""
+        SELECT e.songId, s.title, s.artist, s.albumArtUrl,
+               COALESCE(SUM(e.durationMs), 0) AS totalDurationMs,
+               COUNT(CASE WHEN e.completed = 1 THEN 1 END) AS playCount
+        FROM listening_events e
+        JOIN songs s ON e.songId = s.id
+        WHERE e.completed = 1 AND e.startedAt >= :from AND e.startedAt < :until
+        GROUP BY e.songId
+        ORDER BY playCount DESC
+        LIMIT :limit
+    """)
+    suspend fun getTopSongsInPeriodSuspend(from: Long, until: Long, limit: Int): List<SongPlayStats>
+
+    // Artists with shallow plays in a period
+    @Query("""
+        SELECT s.artist,
+               COALESCE(SUM(e.durationMs), 0) AS totalDurationMs,
+               COUNT(CASE WHEN e.completed = 1 THEN 1 END) AS playCount
+        FROM listening_events e
+        JOIN songs s ON e.songId = s.id
+        WHERE e.completed = 1 AND e.startedAt >= :from AND e.startedAt < :until
+        GROUP BY s.artist
+        HAVING playCount BETWEEN 1 AND :maxPlays
+        ORDER BY RANDOM()
+        LIMIT :limit
+    """)
+    suspend fun getShallowArtistsInPeriodSuspend(from: Long, until: Long, maxPlays: Int, limit: Int): List<ArtistPlayStats>
 }
