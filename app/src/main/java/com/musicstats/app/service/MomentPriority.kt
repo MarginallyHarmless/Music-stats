@@ -94,10 +94,8 @@ object MomentPriority {
 
     fun shouldNotify(tier: Int): Boolean = tier <= 3
 
-    companion object {
-        const val GATE_HOURS = 5f
-        const val GATE_MS = (GATE_HOURS * 3_600_000).toLong()
-        const val EXPIRY_DAYS = 14
-        const val EXPIRY_MS = EXPIRY_DAYS * 24L * 3_600_000L
-    }
+    const val GATE_HOURS = 5f
+    val GATE_MS = (GATE_HOURS * 3_600_000).toLong()
+    const val EXPIRY_DAYS = 14
+    val EXPIRY_MS = EXPIRY_DAYS * 24L * 3_600_000L
 }
