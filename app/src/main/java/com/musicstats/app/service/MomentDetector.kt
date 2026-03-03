@@ -60,6 +60,7 @@ class MomentDetector @Inject constructor(
         newMoments += detectMarathonWeek(now)
         newMoments += detectGrower(now)
         newMoments += detectTasteDriftAndLockedIn(now)
+        newMoments += detectReplacement(now)
 
         // Clean up any stale narrative moments with "?" from key mismatches
         momentDao.deleteStaleByTypePattern("NARRATIVE_%")
@@ -1638,6 +1639,75 @@ class MomentDetector @Inject constructor(
             }
         }
 
+        return result
+    }
+
+    private suspend fun detectReplacement(now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val fourteenDaysMs = 14L * 24 * 3600 * 1000
+        val currentStart = now - fourteenDaysMs
+        val previousStart = currentStart - fourteenDaysMs
+
+        // Get artists with meaningful play counts in each 14-day window
+        val previousTop = eventDao.getTopArtistsByPlayCountInPeriod(previousStart, currentStart, 20)
+        val currentTop = eventDao.getTopArtistsByPlayCountInPeriod(currentStart, now, 20)
+
+        val previousMap = previousTop.associate { it.artist to it.playCount }
+        val currentMap = currentTop.associate { it.artist to it.playCount }
+
+        // Find artists who dropped 50%+
+        val faders = previousMap.filter { (artist, oldPlays) ->
+            oldPlays >= 5 && (currentMap[artist] ?: 0) <= oldPlays / 2
+        }
+
+        // Find artists who rose 50%+
+        val risers = currentMap.filter { (artist, newPlays) ->
+            newPlays >= 5 && newPlays >= (previousMap[artist] ?: 0) * 2
+        }
+
+        // Check all-time plays for 30+ threshold
+        val allTimeArtists = eventDao.getTopArtistsByPlayCountInPeriod(0, now, 999)
+        val allTimeMap = allTimeArtists.associate { it.artist to it.playCount }
+
+        for ((fader, faderOldPlays) in faders) {
+            for ((riser, riserNewPlays) in risers) {
+                if (fader == riser) continue
+
+                // Both must have 30+ all-time plays
+                if ((allTimeMap[fader] ?: 0) < 30 || (allTimeMap[riser] ?: 0) < 30) continue
+
+                val faderEntity = artistDao.findByName(fader)
+                val riserEntity = artistDao.findByName(riser)
+                val sorted = listOf(fader, riser).sorted()
+                val type = "BEHAVIORAL_REPLACEMENT"
+                val entityKey = "replace_${sorted[0]}:${sorted[1]}"
+                if (momentDao.existsByTypeAndKey(type, entityKey)) continue
+
+                val faderNewPlays = currentMap[fader] ?: 0
+                val riserOldPlays = previousMap[riser] ?: 0
+                val copyVariant = momentDao.countByType(type)
+                val rawStats = mapOf<String, Any>(
+                    "artistA" to fader,
+                    "artistB" to riser,
+                    "artistALine" to "$fader: $faderOldPlays \u2192 $faderNewPlays plays",
+                    "artistBLine" to "$riser: $riserOldPlays \u2192 $riserNewPlays plays"
+                )
+                val copy = MomentCopywriter.generate(type, "$fader / $riser", rawStats, copyVariant)
+                persistIfNew(Moment(
+                    type = type,
+                    entityKey = entityKey,
+                    triggeredAt = now,
+                    title = copy.title,
+                    description = copy.description,
+                    artistId = riserEntity?.id,
+                    statLines = copy.statLines,
+                    imageUrl = riserEntity?.imageUrl ?: faderEntity?.imageUrl,
+                    entityName = "$fader \u2192 $riser",
+                    copyVariant = copyVariant
+                ))?.let { result += it }
+                return result // Only fire ONE replacement per detection cycle
+            }
+        }
         return result
     }
 
