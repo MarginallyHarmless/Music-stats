@@ -58,6 +58,7 @@ class MomentDetector @Inject constructor(
         newMoments += detectRediscovery(sevenDaysAgo, now)
         newMoments += detectSlowBurn(sevenDaysAgo, now)
         newMoments += detectMarathonWeek(now)
+        newMoments += detectGrower(now)
 
         // Clean up any stale narrative moments with "?" from key mismatches
         momentDao.deleteStaleByTypePattern("NARRATIVE_%")
@@ -1523,6 +1524,52 @@ class MomentDetector @Inject constructor(
             checkDay = checkDay.minusDays(1)
         }
         return streak
+    }
+
+    private suspend fun detectGrower(now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val thirtyDaysMs = 30L * 24 * 3600 * 1000
+        val songs = eventDao.getSongsWithMinPlays(50)
+        for (song in songs) {
+            // Need at least 60 days of data for this song
+            val ageMs = now - song.firstHeardAt
+            if (ageMs < 2 * thirtyDaysMs) continue
+
+            val earlyPlays = eventDao.getSongPlayCountBeforeSuspend(
+                song.songId, song.firstHeardAt + thirtyDaysMs
+            )
+            if (earlyPlays < 1) continue  // avoid division by zero
+
+            val recentPlays = eventDao.getSongPlayCountSinceSuspend(
+                song.songId, now - thirtyDaysMs
+            )
+
+            // Recent play rate must be >= 3x early play rate
+            // Both windows are 30 days, so raw counts are directly comparable
+            if (recentPlays < 3 * earlyPlays) continue
+
+            val type = "BEHAVIORAL_GROWER"
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "totalPlays" to "${song.playCount}",
+                "earlyPlays" to "$earlyPlays",
+                "recentPlays" to "$recentPlays"
+            )
+            val copy = MomentCopywriter.generate(type, song.title, rawStats, copyVariant)
+            persistIfNew(Moment(
+                type = type,
+                entityKey = "song_${song.songId}",
+                triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
+                songId = song.songId,
+                statLines = copy.statLines,
+                imageUrl = song.albumArtUrl,
+                entityName = song.title,
+                copyVariant = copyVariant
+            ))?.let { result += it }
+        }
+        return result
     }
 
     private fun startOfDay(epochMs: Long): Long {
