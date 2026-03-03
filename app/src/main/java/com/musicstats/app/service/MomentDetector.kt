@@ -59,6 +59,7 @@ class MomentDetector @Inject constructor(
         newMoments += detectSlowBurn(sevenDaysAgo, now)
         newMoments += detectMarathonWeek(now)
         newMoments += detectGrower(now)
+        newMoments += detectTasteDriftAndLockedIn(now)
 
         // Clean up any stale narrative moments with "?" from key mismatches
         momentDao.deleteStaleByTypePattern("NARRATIVE_%")
@@ -1569,6 +1570,74 @@ class MomentDetector @Inject constructor(
                 copyVariant = copyVariant
             ))?.let { result += it }
         }
+        return result
+    }
+
+    private suspend fun detectTasteDriftAndLockedIn(now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val thirtyDaysMs = 30L * 24 * 3600 * 1000
+        val sixtyDaysAgo = now - 2 * thirtyDaysMs
+        val thirtyDaysAgo = now - thirtyDaysMs
+
+        // Top 5 artists by play count in each window
+        val oldTop5 = eventDao.getTopArtistsByPlayCountInPeriod(sixtyDaysAgo, thirtyDaysAgo, 5)
+        val newTop5 = eventDao.getTopArtistsByPlayCountInPeriod(thirtyDaysAgo, now, 5)
+
+        if (oldTop5.size < 5 || newTop5.size < 5) return result
+
+        val oldNames = oldTop5.map { it.artist }.toSet()
+        val newNames = newTop5.map { it.artist }.toSet()
+        val overlap = oldNames.intersect(newNames).size
+
+        val monthKey = LocalDate.now(ZoneId.systemDefault())
+            .format(DateTimeFormatter.ofPattern("yyyy-MM"))
+
+        // Taste Drift: 0-1 overlap
+        if (overlap <= 1) {
+            val type = "BEHAVIORAL_TASTE_DRIFT"
+            val entityKey = "drift_$monthKey"
+            if (!momentDao.existsByTypeAndKey(type, entityKey)) {
+                val copyVariant = momentDao.countByType(type)
+                val rawStats = mapOf<String, Any>(
+                    "thenLine" to oldTop5.take(3).joinToString(", ") { it.artist },
+                    "nowLine" to newTop5.take(3).joinToString(", ") { it.artist }
+                )
+                val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+                persistIfNew(Moment(
+                    type = type,
+                    entityKey = entityKey,
+                    triggeredAt = now,
+                    title = copy.title,
+                    description = copy.description,
+                    statLines = copy.statLines,
+                    copyVariant = copyVariant
+                ))?.let { result += it }
+            }
+        }
+
+        // Locked In: 4-5 overlap
+        if (overlap >= 4) {
+            val type = "BEHAVIORAL_LOCKED_IN"
+            val entityKey = "locked_$monthKey"
+            if (!momentDao.existsByTypeAndKey(type, entityKey)) {
+                val copyVariant = momentDao.countByType(type)
+                val rawStats = mapOf<String, Any>(
+                    "overlapLine" to "$overlap/5 top artists unchanged",
+                    "topLine" to newTop5.take(3).joinToString(", ") { it.artist }
+                )
+                val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+                persistIfNew(Moment(
+                    type = type,
+                    entityKey = entityKey,
+                    triggeredAt = now,
+                    title = copy.title,
+                    description = copy.description,
+                    statLines = copy.statLines,
+                    copyVariant = copyVariant
+                ))?.let { result += it }
+            }
+        }
+
         return result
     }
 
