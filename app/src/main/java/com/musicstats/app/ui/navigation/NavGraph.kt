@@ -18,6 +18,7 @@ import com.musicstats.app.ui.library.SongDetailScreen
 import com.musicstats.app.ui.onboarding.OnboardingScreen
 import com.musicstats.app.ui.settings.SettingsScreen
 import com.musicstats.app.ui.debug.DebugScreen
+import com.musicstats.app.ui.challenges.ChallengeHistoryScreen
 import com.musicstats.app.ui.moments.AllMomentsScreen
 import com.musicstats.app.ui.stats.StatsScreen
 
@@ -37,11 +38,15 @@ fun NavGraph(navController: NavHostController, startDestination: String, modifie
             HomeScreen(
                 onSongClick = { songId -> navController.navigate("song/$songId") },
                 onArtistClick = { artistName -> navController.navigate("artist/${Uri.encode(artistName)}") },
-                onSeeAllMoments = { navController.navigate("moments") }
+                onSeeAllMoments = { navController.navigate("moments") },
+                onSeeAllChallenges = { navController.navigate("challenge_history") }
             )
         }
         composable("moments") {
             AllMomentsScreen()
+        }
+        composable("challenge_history") {
+            ChallengeHistoryScreen(onBack = { navController.popBackStack() })
         }
         composable("stats") {
             StatsScreen()

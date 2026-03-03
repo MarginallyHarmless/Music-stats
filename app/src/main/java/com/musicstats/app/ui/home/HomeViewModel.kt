@@ -9,10 +9,16 @@ import com.musicstats.app.data.model.Moment
 import com.musicstats.app.data.repository.MomentsRepository
 import com.musicstats.app.data.repository.MusicRepository
 import com.musicstats.app.service.MediaSessionTracker
+import com.musicstats.app.data.dao.ChallengeDao
+import com.musicstats.app.data.model.Challenge
+import com.musicstats.app.service.ChallengeGenerator
+import com.musicstats.app.service.ChallengeProgressUpdater
+import com.musicstats.app.service.ChallengeWorker
 import com.musicstats.app.service.MomentDetector
 import com.musicstats.app.service.MomentPriority
 import com.musicstats.app.service.MomentReleaseScheduler
 import com.musicstats.app.service.MomentWorker
+import com.musicstats.app.service.WeekUtils
 import com.musicstats.app.util.daysAgo
 import com.musicstats.app.util.startOfToday
 import com.musicstats.app.util.startOfWeek
@@ -38,7 +44,10 @@ class HomeViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val momentDetector: MomentDetector,
     private val momentsRepository: MomentsRepository,
-    private val releaseScheduler: MomentReleaseScheduler
+    private val releaseScheduler: MomentReleaseScheduler,
+    private val challengeGenerator: ChallengeGenerator,
+    private val challengeProgressUpdater: ChallengeProgressUpdater,
+    private val challengeDao: ChallengeDao
 ) : ViewModel() {
 
     val greeting: String
@@ -63,6 +72,18 @@ class HomeViewModel @Inject constructor(
         repository.backfillAlbumArt()
         repository.backfillPaletteColors()
         MomentWorker.schedule(context)
+        ChallengeWorker.schedule(context)
+    }
+
+    val activeChallenges: StateFlow<List<Challenge>> =
+        challengeDao.getChallengesForWeek(WeekUtils.currentWeekStart())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun refreshChallengesOnOpen() {
+        viewModelScope.launch(Dispatchers.IO) {
+            challengeGenerator.generateWeeklyChallenges()
+            challengeProgressUpdater.updateAll()
+        }
     }
 
     val todayListeningTimeMs: StateFlow<Long> =
