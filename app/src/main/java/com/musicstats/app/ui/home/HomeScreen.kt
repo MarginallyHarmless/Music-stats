@@ -89,6 +89,7 @@ fun HomeScreen(
     val topSongs by viewModel.topSongsThisWeek.collectAsState()
     val streak by viewModel.currentStreak.collectAsState()
     val recentMoments by viewModel.recentMoments.collectAsState()
+    val momentGateState by viewModel.momentGateState.collectAsState()
 
     // Live ticker: adds current session elapsed time to DB total
     var liveElapsed by remember { mutableLongStateOf(0L) }
@@ -447,7 +448,8 @@ fun HomeScreen(
                     viewModel.markMomentShared(moment.id)
                 }
             },
-            onSeeAll = onSeeAllMoments
+            onSeeAll = onSeeAllMoments,
+            gateState = momentGateState
         )
 
         // 7. Weekly chart section
