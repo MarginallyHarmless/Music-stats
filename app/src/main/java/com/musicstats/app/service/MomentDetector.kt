@@ -61,6 +61,7 @@ class MomentDetector @Inject constructor(
         newMoments += detectGrower(now)
         newMoments += detectTasteDriftAndLockedIn(now)
         newMoments += detectReplacement(now)
+        newMoments += detectMainCharacter(todayStart, now)
 
         // Clean up any stale narrative moments with "?" from key mismatches
         momentDao.deleteStaleByTypePattern("NARRATIVE_%")
@@ -1708,6 +1709,56 @@ class MomentDetector @Inject constructor(
                 return result // Only fire ONE replacement per detection cycle
             }
         }
+        return result
+    }
+
+    private suspend fun detectMainCharacter(todayStart: Long, now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+
+        // Get all daily totals, sorted by duration descending
+        val dailyTotals = eventDao.getDailyListeningTotalsSuspend()
+
+        // Need 30+ distinct listening days to avoid early false positives
+        if (dailyTotals.size < 30) return result
+
+        // Today's total listening
+        val todayMs = eventDao.getListeningTimeSinceSuspend(todayStart)
+        if (todayMs <= 0) return result
+
+        // Find today's rank (dailyTotals is sorted DESC by totalDurationMs)
+        // Today might already be in the list, so filter it out and rank against other days
+        val todayDate = LocalDate.now(ZoneId.systemDefault()).toString()
+        val otherDays = dailyTotals.filter { it.day != todayDate }
+        val rank = otherDays.count { it.totalDurationMs > todayMs } + 1
+
+        if (rank > 3) return result
+
+        val type = "BEHAVIORAL_MAIN_CHARACTER"
+        val entityKey = "mce_$todayDate"
+        if (momentDao.existsByTypeAndKey(type, entityKey)) return result
+
+        val hours = todayMs / 3_600_000L
+        val mins = (todayMs % 3_600_000L) / 60_000L
+        val durationLabel = if (hours > 0) "${hours}h ${mins}m" else "${mins}m"
+        val songCount = eventDao.getTotalPlayCountInPeriodSuspend(todayStart)
+
+        val copyVariant = momentDao.countByType(type)
+        val rawStats = mapOf<String, Any>(
+            "todayDuration" to durationLabel,
+            "rank" to "$rank",
+            "songCount" to "$songCount"
+        )
+        val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+        persistIfNew(Moment(
+            type = type,
+            entityKey = entityKey,
+            triggeredAt = now,
+            title = copy.title,
+            description = copy.description,
+            statLines = copy.statLines,
+            copyVariant = copyVariant
+        ))?.let { result += it }
+
         return result
     }
 
