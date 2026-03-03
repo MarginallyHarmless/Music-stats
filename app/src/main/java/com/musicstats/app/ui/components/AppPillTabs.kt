@@ -10,14 +10,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.musicstats.app.ui.theme.LocalAlbumPalette
 
 @Composable
 fun AppPillTabs(
@@ -26,8 +28,6 @@ fun AppPillTabs(
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val palette = LocalAlbumPalette.current
-
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -38,14 +38,21 @@ fun AppPillTabs(
     ) {
         tabs.forEachIndexed { index, title ->
             val selected = index == selectedIndex
+            val bgColor by animateColorAsState(
+                targetValue = if (selected) Color.White.copy(alpha = 0.12f) else Color.Transparent,
+                animationSpec = tween(250),
+                label = "pillBg"
+            )
+            val textColor by animateColorAsState(
+                targetValue = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                animationSpec = tween(250),
+                label = "pillText"
+            )
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(50))
-                    .background(
-                        if (selected) palette.accent.copy(alpha = 0.2f)
-                        else Color.Transparent
-                    )
+                    .background(bgColor)
                     .clickable { onTabSelected(index) }
                     .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center
@@ -54,8 +61,7 @@ fun AppPillTabs(
                     text = title,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                    color = if (selected) palette.accent
-                    else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = textColor
                 )
             }
         }
