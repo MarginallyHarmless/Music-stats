@@ -437,6 +437,39 @@ object MomentCopywriter {
                 )
             }
 
+            // ── Deeper Insight ────────────────────────────────
+            type == "BEHAVIORAL_GROWER" -> {
+                val earlyPlays = rawStats["earlyPlays"]?.toString() ?: "?"
+                val recentPlays = rawStats["recentPlays"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "The Grower",
+                    description = "You barely noticed $name at first — $earlyPlays plays in the first month. Now it's one of your most-played. Some things take time.",
+                    statLines = rawStats.toStatLines("totalPlays" to "%s total plays", "earlyPlays" to "first month: %s plays", "recentPlays" to "last month: %s plays")
+                )
+            }
+            type == "BEHAVIORAL_TASTE_DRIFT" -> MomentCopy(
+                title = "Taste Drift",
+                description = "Your top artists a month ago? Completely different lineup. Your taste shifted and you probably didn't even notice.",
+                statLines = rawStats.toStatLines("thenLine" to "then: %s", "nowLine" to "now: %s")
+            )
+            type == "BEHAVIORAL_LOCKED_IN" -> {
+                val overlapCount = rawStats["overlapCount"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "Locked In",
+                    description = "Your top artists haven't budged in a month. You know exactly what you like.",
+                    statLines = rawStats.toStatLines("overlapLine" to "%s", "topLine" to "top: %s")
+                )
+            }
+            type == "BEHAVIORAL_REPLACEMENT" -> {
+                val artistA = rawStats["artistA"]?.let { "**$it**" } ?: "?"
+                val artistB = rawStats["artistB"]?.let { "**$it**" } ?: "?"
+                MomentCopy(
+                    title = "The Replacement",
+                    description = "$artistB showed up right as $artistA faded out. One door closes, another opens.",
+                    statLines = rawStats.toStatLines("artistALine" to "%s", "artistBLine" to "%s")
+                )
+            }
+
             // Fallback for any unknown type
             else -> MomentCopy(
                 title = type.replace("_", " ").lowercase()
