@@ -22,6 +22,7 @@ import com.musicstats.app.ui.components.MomentCard
 fun MomentsStrip(
     moments: List<Moment>,
     onMomentTap: (Moment) -> Unit,
+    onShareMoment: (Moment) -> Unit,
     onSeeAll: () -> Unit
 ) {
     if (moments.isEmpty()) return
@@ -30,7 +31,7 @@ fun MomentsStrip(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
+                .padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -46,15 +47,14 @@ fun MomentsStrip(
         }
 
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             moments.take(3).forEach { moment ->
                 MomentCard(
                     moment = moment,
-                    onTap = { onMomentTap(moment) }
+                    onTap = { onMomentTap(moment) },
+                    onShare = { onShareMoment(moment) }
                 )
             }
         }

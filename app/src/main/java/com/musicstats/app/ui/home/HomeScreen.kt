@@ -56,7 +56,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import coil3.compose.AsyncImage
-import com.musicstats.app.data.model.Moment
 import com.musicstats.app.service.MusicNotificationListener
 import com.musicstats.app.ui.components.AuroraBackground
 import com.musicstats.app.ui.components.GradientCard
@@ -64,7 +63,6 @@ import com.musicstats.app.ui.components.ListeningTimeChart
 import com.musicstats.app.ui.components.MomentShareCard
 import com.musicstats.app.ui.components.SectionHeader
 import com.musicstats.app.ui.components.StatCard
-import com.musicstats.app.ui.moments.MomentDetailBottomSheet
 import com.musicstats.app.ui.share.ArtistSpotlightCard
 import com.musicstats.app.ui.share.DailyRecapCard
 import com.musicstats.app.ui.share.ShareBottomSheet
@@ -110,8 +108,6 @@ fun HomeScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     var listenerEnabled by remember { mutableStateOf(isNotificationListenerEnabled(context)) }
     var showShareSheet by remember { mutableStateOf(false) }
-    var selectedMoment by remember { mutableStateOf<Moment?>(null) }
-    var showMomentDetail by remember { mutableStateOf(false) }
 
     androidx.compose.runtime.LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -438,8 +434,18 @@ fun HomeScreen(
             moments = recentMoments,
             onMomentTap = { moment ->
                 viewModel.markMomentSeen(moment.id)
-                selectedMoment = moment
-                showMomentDetail = true
+            },
+            onShareMoment = { moment ->
+                val density = context.resources.displayMetrics.density
+                val size = (360 * density).toInt()
+                ShareCardRenderer.renderComposable(context, size, size, {
+                    MusicStatsTheme {
+                        MomentShareCard(moment = moment, imageUrl = moment.imageUrl)
+                    }
+                }) { bitmap ->
+                    ShareCardRenderer.shareBitmap(context, bitmap)
+                    viewModel.markMomentShared(moment.id)
+                }
             },
             onSeeAll = onSeeAllMoments
         )
@@ -573,32 +579,6 @@ fun HomeScreen(
                     }
                 }
             )
-        }
-
-        if (showMomentDetail) {
-            selectedMoment?.let { moment ->
-                MomentDetailBottomSheet(
-                    moment = moment,
-                    onShare = {
-                        val density = context.resources.displayMetrics.density
-                        val size = (360 * density).toInt()
-                        ShareCardRenderer.renderComposable(context, size, size, {
-                            MusicStatsTheme {
-                                MomentShareCard(moment = moment, imageUrl = moment.imageUrl)
-                            }
-                        }) { bitmap ->
-                            ShareCardRenderer.shareBitmap(context, bitmap)
-                            viewModel.markMomentShared(moment.id)
-                        }
-                        showMomentDetail = false
-                        selectedMoment = null
-                    },
-                    onDismiss = {
-                        showMomentDetail = false
-                        selectedMoment = null
-                    }
-                )
-            }
         }
 
         // 10. Bottom spacer

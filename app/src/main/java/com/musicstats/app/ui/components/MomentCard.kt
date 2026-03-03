@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,6 +46,7 @@ private val CardShape = RoundedCornerShape(20.dp)
 fun MomentCard(
     moment: Moment,
     onTap: () -> Unit,
+    onShare: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val isUnseen = moment.seenAt == null
@@ -103,7 +107,28 @@ fun MomentCard(
                 )
         )
 
-        // Layer 3: text anchored to bottom
+        // Layer 3: share button
+        if (onShare != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(12.dp)
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.40f))
+                    .clickable { onShare() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Share",
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+
+        // Layer 4: text anchored to bottom
         Column(
             modifier = Modifier
                 .fillMaxWidth()

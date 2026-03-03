@@ -24,7 +24,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.musicstats.app.data.model.Moment
 import com.musicstats.app.ui.components.AppPillTabs
 import com.musicstats.app.ui.components.AuroraBackground
 import com.musicstats.app.ui.components.MomentCard
@@ -39,8 +38,6 @@ fun AllMomentsScreen(
     val moments by viewModel.moments.collectAsState()
     val previewMoments by viewModel.previewMoments.collectAsState()
     val context = LocalContext.current
-    var selectedMoment by remember { mutableStateOf<Moment?>(null) }
-    var showMomentDetail by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(0) }
 
     val displayMoments = if (selectedTab == 1) previewMoments else moments
@@ -86,8 +83,18 @@ fun AllMomentsScreen(
                             moment = moment,
                             onTap = {
                                 if (selectedTab == 0) viewModel.markSeen(moment.id)
-                                selectedMoment = moment
-                                showMomentDetail = true
+                            },
+                            onShare = {
+                                val density = context.resources.displayMetrics.density
+                                val size = (360 * density).toInt()
+                                ShareCardRenderer.renderComposable(context, size, size, {
+                                    MusicStatsTheme {
+                                        MomentShareCard(moment = moment, imageUrl = moment.imageUrl)
+                                    }
+                                }) { bitmap ->
+                                    ShareCardRenderer.shareBitmap(context, bitmap)
+                                    viewModel.markShared(moment.id)
+                                }
                             }
                         )
                     }
@@ -97,30 +104,4 @@ fun AllMomentsScreen(
         }
     }
 
-    if (showMomentDetail) {
-        selectedMoment?.let { moment ->
-            MomentDetailBottomSheet(
-                moment = moment,
-                onShare = {
-                    val density = context.resources.displayMetrics.density
-                    val w = (360 * density).toInt()
-                    val h = (640 * density).toInt()
-                    ShareCardRenderer.renderComposable(context, w, h, {
-                        MusicStatsTheme {
-                            MomentShareCard(moment = moment, imageUrl = moment.imageUrl)
-                        }
-                    }) { bitmap ->
-                        ShareCardRenderer.shareBitmap(context, bitmap)
-                        viewModel.markShared(moment.id)
-                    }
-                    showMomentDetail = false
-                    selectedMoment = null
-                },
-                onDismiss = {
-                    showMomentDetail = false
-                    selectedMoment = null
-                }
-            )
-        }
-    }
 }
