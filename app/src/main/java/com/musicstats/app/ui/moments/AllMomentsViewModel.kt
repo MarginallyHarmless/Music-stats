@@ -303,6 +303,22 @@ class AllMomentsViewModel @Inject constructor(
                 "artist1Line" to "${a0?.name ?: "Radiohead"}: 8h", "artist2Line" to "${a1?.name ?: "Coldplay"}: 5h",
                 "overlap" to "0 shared sessions"))
 
+        // ── Deeper Insight (4) ──────────────────────────────────
+        result += behavioralMoment(-110, "BEHAVIORAL_GROWER", s2?.title ?: "Slow Dancer",
+            mapOf("totalPlays" to "67", "earlyPlays" to "3", "recentPlays" to "28"),
+            songId = s2?.songId, imageUrl = s2?.albumArtUrl ?: songArt)
+        result += behavioralMoment(-111, "BEHAVIORAL_TASTE_DRIFT", null,
+            mapOf("thenLine" to "${a0?.name ?: "Arctic Monkeys"}, ${a1?.name ?: "Radiohead"}, Tame Impala",
+                "nowLine" to "SZA, Olivia Rodrigo, Billie Eilish"))
+        result += behavioralMoment(-112, "BEHAVIORAL_LOCKED_IN", null,
+            mapOf("overlapLine" to "4/5 top artists unchanged",
+                "topLine" to "${a0?.name ?: "Arctic Monkeys"}, ${a1?.name ?: "Radiohead"}, Tame Impala"))
+        result += behavioralMoment(-113, "BEHAVIORAL_REPLACEMENT", null,
+            mapOf("artistA" to (a0?.name ?: "Coldplay"), "artistB" to (a1?.name ?: "Radiohead"),
+                "artistALine" to "${a0?.name ?: "Coldplay"}: 24 → 5 plays",
+                "artistBLine" to "${a1?.name ?: "Radiohead"}: 3 → 19 plays"),
+            imageUrl = a1?.imageUrl ?: a0?.imageUrl ?: artistArt)
+
         return result
     }
 }
