@@ -218,6 +218,17 @@ interface ListeningEventDao {
     )
     fun getDailyListening(since: Long = 0): Flow<List<DailyListening>>
 
+    @Query("""
+        SELECT strftime('%Y-%m-%d', startedAt / 1000, 'unixepoch', 'localtime') AS day,
+               COALESCE(SUM(durationMs), 0) AS totalDurationMs,
+               COUNT(id) AS eventCount
+        FROM listening_events
+        WHERE completed = 1
+        GROUP BY day
+        ORDER BY totalDurationMs DESC
+    """)
+    suspend fun getDailyListeningTotalsSuspend(): List<DailyListening>
+
     // --- Total play count ---
 
     @Query("SELECT COUNT(*) FROM listening_events WHERE startedAt >= :since AND completed = 1")
