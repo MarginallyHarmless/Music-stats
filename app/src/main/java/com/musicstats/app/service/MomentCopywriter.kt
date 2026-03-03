@@ -486,6 +486,87 @@ object MomentCopywriter {
                     statLines = rawStats.toStatLines("duration" to "%s straight", "songCount" to "%s songs", "noInterrupt" to "%s")
                 )
             }
+            type == "BEHAVIORAL_ONE_HIT_WONDER" -> {
+                val plays = rawStats["plays"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "One-Hit Wonder",
+                    description = "You've played $name $plays times. Everything else by ${rawStats["artistName"]?.let { "**$it**" } ?: "that artist"}? Barely a footnote.",
+                    statLines = rawStats.toStatLines("plays" to "%s plays", "pct" to "%s%% of all plays", "otherCount" to "%s other songs")
+                )
+            }
+            type == "BEHAVIORAL_CLOCK_WORK" -> {
+                val avgTime = rawStats["avgTime"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "Clock Work",
+                    description = "You press play around $avgTime almost every day. 10 out of the last 14 days, like clockwork.",
+                    statLines = rawStats.toStatLines("matchingDays" to "%s/14 days", "avgTime" to "avg start: %s", "window" to "within %s")
+                )
+            }
+            type == "BEHAVIORAL_ANTHEM" -> {
+                val pct = rawStats["pct"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "The Anthem",
+                    description = "$name is $pct% of your entire month. That's not a favorite — that's an anthem.",
+                    statLines = rawStats.toStatLines("plays" to "%s plays this month", "pct" to "%s%% of all plays", "rank" to "#%s all-time")
+                )
+            }
+
+            // ── Flex / Shareable ────────────────────────────────
+            type == "FLEX_BIGGEST_MONTH" -> {
+                val duration = rawStats["duration"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "Top 1%",
+                    description = "$duration this month. That's more music than any month before. New personal record.",
+                    statLines = rawStats.toStatLines("duration" to "%s this month", "prevBest" to "previous best: %s", "songCount" to "%s songs")
+                )
+            }
+            type == "FLEX_LOOP" -> {
+                val plays = rawStats["plays"]?.toString() ?: "?"
+                val interval = rawStats["interval"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "The Loop",
+                    description = "You played $name $plays times today. That's roughly once every $interval.",
+                    statLines = rawStats.toStatLines("plays" to "%s plays today", "interval" to "~every %s", "allTimePlays" to "%s all-time")
+                )
+            }
+            type.startsWith("FLEX_COLLECTOR_") -> {
+                val count = rawStats["count"]?.toString() ?: "?"
+                val (title, desc) = when (type) {
+                    "FLEX_COLLECTOR_2000" -> "Music Hoarder" to "2,000 songs. You don't listen to music — you curate it."
+                    "FLEX_COLLECTOR_5000" -> "Living Archive" to "5,000 songs. That's not a library, that's an institution."
+                    else -> "The Collector" to "1,000 unique songs. You could run a radio station."
+                }
+                MomentCopy(
+                    title = title,
+                    description = desc,
+                    statLines = rawStats.toStatLines("count" to "%s songs", "artistCount" to "from %s artists", "totalHours" to "%sh of music")
+                )
+            }
+            type == "FLEX_SPEED_RUN" -> {
+                val days = rawStats["days"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "Speed Run",
+                    description = "50 plays of $name in $days days. Most relationships don't move that fast.",
+                    statLines = rawStats.toStatLines("days" to "%s days to 50 plays", "rank" to "#%s all-time", "daysAgo" to "discovered %sd ago")
+                )
+            }
+            type == "FLEX_POWER_HOUR" -> {
+                val count = rawStats["count"]?.toString() ?: "?"
+                val seconds = rawStats["seconds"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "Power Hour",
+                    description = "$count songs in a single hour. That's one every $seconds seconds.",
+                    statLines = rawStats.toStatLines("count" to "%s songs", "seconds" to "~every %ss", "peakHour" to "%s")
+                )
+            }
+            type == "FLEX_AFTER_HOURS" -> {
+                val duration = rawStats["duration"]?.toString() ?: "?"
+                MomentCopy(
+                    title = "After Hours",
+                    description = "$duration of music between midnight and 6am. Your neighbors have opinions.",
+                    statLines = rawStats.toStatLines("duration" to "%s after midnight", "songCount" to "~%s songs", "peakHour" to "%s peak")
+                )
+            }
 
             // Fallback for any unknown type
             else -> MomentCopy(

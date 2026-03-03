@@ -108,6 +108,59 @@ A "flex" moment for single-artist deep dives without switching to another artist
 - Description: "{duration} of nothing but **{artistName}**. No breaks, no distractions. Just dedication."
 - Stat lines: `["{duration} straight", "{songCount} songs", "no interruptions"]`
 
+## 7. One-Hit Wonder
+
+One song by an artist dominates all plays for that artist — a quirky identity card.
+
+**Type:** `BEHAVIORAL_ONE_HIT_WONDER`
+**Entity key:** `ohw_{songId}`
+
+**Detection:**
+- Iterate all artists via `getAllArtistsWithDurationSuspend()`
+- For each artist, get song breakdown via `getSongPlayCountsByArtistSuspend(artist)`
+- Must have 2+ songs for the artist
+- Top song must have 50+ plays and account for 90%+ of all plays for that artist
+
+**Copy:**
+- Title: "One-Hit Wonder"
+- Description: "You've played **{songName}** {plays} times. Everything else by **{artistName}**? Barely a footnote."
+- Stat lines: `["{plays} plays", "{pct}% of all {artistName} plays", "{otherCount} other songs"]`
+
+## 8. Clock Work
+
+The user starts listening at nearly the same time every day — a surprising self-discovery card.
+
+**Type:** `BEHAVIORAL_CLOCK_WORK`
+**Entity key:** `clock_{monthKey}`
+
+**Detection:**
+- Call `getFirstEventTimestampPerDay(fourteenDaysAgo)` to get each day's first listening timestamp
+- Need at least 10 days with data
+- Extract hour+minute from each timestamp, find the 30-min window that captures the most days
+- Trigger if 10+ of the last 14 days fall within that window
+
+**Copy:**
+- Title: "Clock Work"
+- Description: "You press play around {avgTime} almost every day. 10 out of the last 14 days, like clockwork."
+- Stat lines: `["{matchingDays}/14 days", "avg start: {avgTime}", "within {window}"]`
+
+## 9. The Anthem
+
+One song accounts for a massive share of the user's entire month — a flex card.
+
+**Type:** `BEHAVIORAL_ANTHEM`
+**Entity key:** `anthem_{monthKey}_{songId}`
+
+**Detection:**
+- Get top song this month via `getTopSongsInPeriodByPlayCountSuspend(monthStart, 1)`
+- Get total plays via `getTotalPlayCountInPeriodSuspend(monthStart)`
+- Top song must have 20+ plays and account for 25%+ of total monthly plays
+
+**Copy:**
+- Title: "The Anthem"
+- Description: "**{songName}** is {pct}% of your entire month. That's not a favorite — that's an anthem."
+- Stat lines: `["{plays} plays this month", "{pct}% of all plays", "#{rank} all-time"]`
+
 ## Background Images
 
 All types use the dark placeholder background (Color 0xFF1A1A28 with radial palette glow) unless a bundled background image is assigned later.
@@ -122,3 +175,11 @@ All types use the dark placeholder background (Color 0xFF1A1A28 with radial pale
 - The Replacement detection should run after other detections since it compares artist pairs
 - Main Character Energy needs a new DAO query for daily totals across all history
 - The Marathon reuses event-ordered queries, groups consecutive same-artist events
+- One-Hit Wonder needs new DAO query `getSongPlayCountsByArtistSuspend`
+- Clock Work needs new DAO query `getFirstEventTimestampPerDay` and data class `DailyFirstEvent`
+- The Anthem reuses existing period queries plus `getSongRankByPlayCountSuspend` for all-time rank
+
+## Round 4: Flex Moments
+
+See `docs/plans/2026-03-03-flex-moments-design.md` for full design. Added 6 shareable flex moment types:
+- FLEX_BIGGEST_MONTH, FLEX_LOOP, FLEX_COLLECTOR_1000/2000/5000, FLEX_SPEED_RUN, FLEX_POWER_HOUR, FLEX_AFTER_HOURS

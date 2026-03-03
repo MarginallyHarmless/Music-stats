@@ -25,6 +25,7 @@ class MomentDetector @Inject constructor(
         val STREAK_THRESHOLDS = listOf(7, 14, 30, 100)
         val TOTAL_HOUR_THRESHOLDS_MS = listOf(24L, 100L, 500L, 1000L).map { it * 3_600_000L }
         val DISCOVERY_THRESHOLDS = listOf(100, 250, 500)
+        val COLLECTOR_THRESHOLDS = listOf(1000, 2000, 5000)
     }
 
     suspend fun detectAndPersistNewMoments(): List<Moment> {
@@ -63,6 +64,15 @@ class MomentDetector @Inject constructor(
         newMoments += detectReplacement(now)
         newMoments += detectMainCharacter(todayStart, now)
         newMoments += detectArtistMarathon(todayStart, now)
+        newMoments += detectOneHitWonder(now)
+        newMoments += detectClockWork(now)
+        newMoments += detectAnthem(now)
+        newMoments += detectBiggestMonth(now)
+        newMoments += detectLoop(todayStart, now)
+        newMoments += detectCollector(now)
+        newMoments += detectSpeedRun(now)
+        newMoments += detectPowerHour(todayStart, now)
+        newMoments += detectAfterHours(now)
 
         // Clean up any stale narrative moments with "?" from key mismatches
         momentDao.deleteStaleByTypePattern("NARRATIVE_%")
@@ -1833,6 +1843,421 @@ class MomentDetector @Inject constructor(
             entityName = artist,
             copyVariant = copyVariant
         ))
+    }
+
+    private suspend fun detectOneHitWonder(now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val allArtists = eventDao.getAllArtistsWithDurationSuspend()
+
+        for (artistStats in allArtists) {
+            val songs = eventDao.getSongPlayCountsByArtistSuspend(artistStats.artist)
+            if (songs.size < 2) continue
+            val topSong = songs.first()
+            if (topSong.playCount < 50) continue
+            val totalPlays = songs.sumOf { it.playCount }
+            if (totalPlays <= 0) continue
+            val pct = (topSong.playCount * 100) / totalPlays
+            if (pct < 90) continue
+
+            val type = "BEHAVIORAL_ONE_HIT_WONDER"
+            val entityKey = "ohw_${topSong.songId}"
+            if (momentDao.existsByTypeAndKey(type, entityKey)) continue
+
+            val otherCount = songs.size - 1
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "plays" to "${topSong.playCount}",
+                "pct" to "$pct",
+                "artistName" to artistStats.artist,
+                "otherCount" to "$otherCount"
+            )
+            val copy = MomentCopywriter.generate(type, topSong.title, rawStats, copyVariant)
+            persistIfNew(Moment(
+                type = type,
+                entityKey = entityKey,
+                triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
+                songId = topSong.songId,
+                statLines = copy.statLines,
+                imageUrl = topSong.albumArtUrl,
+                entityName = topSong.title,
+                copyVariant = copyVariant
+            ))?.let { result += it }
+        }
+        return result
+    }
+
+    private suspend fun detectClockWork(now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val fourteenDaysAgo = now - 14L * 24 * 3600 * 1000
+        val dailyFirstEvents = eventDao.getFirstEventTimestampPerDay(fourteenDaysAgo)
+
+        if (dailyFirstEvents.size < 10) return result
+
+        // Extract hour and minute from each day's first event
+        val zone = ZoneId.systemDefault()
+        val minutesOfDay = dailyFirstEvents.map { entry ->
+            val time = java.time.Instant.ofEpochMilli(entry.firstStartedAt)
+                .atZone(zone).toLocalTime()
+            time.hour * 60 + time.minute
+        }
+
+        // Find the 30-min window that captures the most days
+        var bestWindowStart = 0
+        var bestCount = 0
+        for (windowStart in 0 until 24 * 60) {
+            val windowEnd = windowStart + 30
+            val count = minutesOfDay.count { min ->
+                if (windowEnd <= 24 * 60) {
+                    min in windowStart until windowEnd
+                } else {
+                    min >= windowStart || min < (windowEnd % (24 * 60))
+                }
+            }
+            if (count > bestCount) {
+                bestCount = count
+                bestWindowStart = windowStart
+            }
+        }
+
+        if (bestCount < 10) return result
+
+        val monthKey = LocalDate.now(zone).format(DateTimeFormatter.ofPattern("yyyy-MM"))
+        val type = "BEHAVIORAL_CLOCK_WORK"
+        val entityKey = "clock_$monthKey"
+        if (momentDao.existsByTypeAndKey(type, entityKey)) return result
+
+        // Format average time within the window
+        val windowMid = bestWindowStart + 15
+        val avgHour = (windowMid / 60) % 24
+        val avgMin = windowMid % 60
+        val avgTime = String.format("%d:%02d%s",
+            if (avgHour % 12 == 0) 12 else avgHour % 12,
+            avgMin,
+            if (avgHour < 12) "am" else "pm"
+        )
+
+        val copyVariant = momentDao.countByType(type)
+        val rawStats = mapOf<String, Any>(
+            "matchingDays" to "$bestCount",
+            "avgTime" to avgTime,
+            "window" to "30min"
+        )
+        val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+        persistIfNew(Moment(
+            type = type,
+            entityKey = entityKey,
+            triggeredAt = now,
+            title = copy.title,
+            description = copy.description,
+            statLines = copy.statLines,
+            copyVariant = copyVariant
+        ))?.let { result += it }
+
+        return result
+    }
+
+    private suspend fun detectAnthem(now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val zone = ZoneId.systemDefault()
+        val monthKey = LocalDate.now(zone).format(DateTimeFormatter.ofPattern("yyyy-MM"))
+        val monthStart = YearMonth.now(zone).atDay(1)
+            .atStartOfDay(zone).toInstant().toEpochMilli()
+
+        val topSongs = eventDao.getTopSongsInPeriodByPlayCountSuspend(monthStart, 1)
+        if (topSongs.isEmpty()) return result
+        val topSong = topSongs.first()
+        if (topSong.playCount < 20) return result
+
+        val totalPlays = eventDao.getTotalPlayCountInPeriodSuspend(monthStart)
+        if (totalPlays <= 0) return result
+        val pct = (topSong.playCount * 100) / totalPlays.toInt()
+        if (pct < 25) return result
+
+        val type = "BEHAVIORAL_ANTHEM"
+        val entityKey = "anthem_${monthKey}_${topSong.songId}"
+        if (momentDao.existsByTypeAndKey(type, entityKey)) return result
+
+        val rank = eventDao.getSongRankByPlayCountSuspend(topSong.songId)
+
+        val copyVariant = momentDao.countByType(type)
+        val rawStats = mapOf<String, Any>(
+            "plays" to "${topSong.playCount}",
+            "pct" to "$pct",
+            "rank" to "$rank"
+        )
+        val copy = MomentCopywriter.generate(type, topSong.title, rawStats, copyVariant)
+        persistIfNew(Moment(
+            type = type,
+            entityKey = entityKey,
+            triggeredAt = now,
+            title = copy.title,
+            description = copy.description,
+            songId = topSong.songId,
+            statLines = copy.statLines,
+            imageUrl = topSong.albumArtUrl,
+            entityName = topSong.title,
+            copyVariant = copyVariant
+        ))?.let { result += it }
+
+        return result
+    }
+
+    private suspend fun detectBiggestMonth(now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val twoYearsAgo = now - 730L * 24 * 3600 * 1000
+        val months = eventDao.getMonthlyListeningTotalsSuspend(twoYearsAgo)
+        if (months.size < 3) return result
+
+        val currentMonthKey = LocalDate.now(ZoneId.systemDefault())
+            .format(DateTimeFormatter.ofPattern("yyyy-MM"))
+        val currentMonth = months.lastOrNull { it.monthKey == currentMonthKey } ?: return result
+        val previousMax = months.filter { it.monthKey != currentMonthKey }.maxOfOrNull { it.totalMs } ?: return result
+
+        if (currentMonth.totalMs <= previousMax) return result
+
+        val type = "FLEX_BIGGEST_MONTH"
+        val entityKey = "bigmonth_$currentMonthKey"
+        if (momentDao.existsByTypeAndKey(type, entityKey)) return result
+
+        val zone = ZoneId.systemDefault()
+        val monthStart = YearMonth.now(zone).atDay(1)
+            .atStartOfDay(zone).toInstant().toEpochMilli()
+        val songCount = eventDao.getUniqueSongCountInPeriodSuspend(monthStart)
+        val duration = formatDuration(currentMonth.totalMs)
+        val prevBest = formatDuration(previousMax)
+
+        val copyVariant = momentDao.countByType(type)
+        val rawStats = mapOf<String, Any>(
+            "duration" to duration,
+            "prevBest" to prevBest,
+            "songCount" to "$songCount"
+        )
+        val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+        persistIfNew(Moment(
+            type = type,
+            entityKey = entityKey,
+            triggeredAt = now,
+            title = copy.title,
+            description = copy.description,
+            statLines = copy.statLines,
+            isPersonalBest = true,
+            copyVariant = copyVariant
+        ))?.let { result += it }
+
+        return result
+    }
+
+    private suspend fun detectLoop(todayStart: Long, now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val todayEnd = todayStart + 86_400_000L
+        val todaySongs = eventDao.getSongsPlayedOnDay(todayStart, todayEnd)
+        val todayDate = LocalDate.now(ZoneId.systemDefault()).toString()
+
+        for (song in todaySongs) {
+            if (song.playCount < 15) continue
+
+            val type = "FLEX_LOOP"
+            val entityKey = "loop_${song.songId}_$todayDate"
+            if (momentDao.existsByTypeAndKey(type, entityKey)) continue
+
+            val hoursElapsed = ((now - todayStart) / 3_600_000.0).coerceAtLeast(1.0)
+            val intervalMinutes = ((hoursElapsed * 60) / song.playCount).toInt()
+            val interval = if (intervalMinutes >= 60) "${intervalMinutes / 60}h ${intervalMinutes % 60}m" else "${intervalMinutes}m"
+
+            val allTimePlays = eventDao.getSongStats(song.songId)?.playCount ?: song.playCount
+
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "plays" to "${song.playCount}",
+                "interval" to interval,
+                "allTimePlays" to "$allTimePlays"
+            )
+            val copy = MomentCopywriter.generate(type, song.title, rawStats, copyVariant)
+            persistIfNew(Moment(
+                type = type,
+                entityKey = entityKey,
+                triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
+                songId = song.songId,
+                statLines = copy.statLines,
+                imageUrl = song.albumArtUrl,
+                entityName = song.title,
+                copyVariant = copyVariant
+            ))?.let { result += it }
+        }
+        return result
+    }
+
+    private suspend fun detectCollector(now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val uniqueSongs = eventDao.getUniqueSongCountSuspend()
+        val artistCount = eventDao.getUniqueArtistCountSuspend()
+        val totalMs = eventDao.getTotalListeningTimeMsSuspend()
+        val totalHours = totalMs / 3_600_000L
+
+        for (threshold in COLLECTOR_THRESHOLDS) {
+            if (uniqueSongs < threshold) break
+
+            val type = "FLEX_COLLECTOR_$threshold"
+            val entityKey = "collector_$threshold"
+            if (momentDao.existsByTypeAndKey(type, entityKey)) continue
+
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "count" to "$uniqueSongs",
+                "artistCount" to "$artistCount",
+                "totalHours" to "$totalHours"
+            )
+            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            persistIfNew(Moment(
+                type = type,
+                entityKey = entityKey,
+                triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
+                statLines = copy.statLines,
+                copyVariant = copyVariant
+            ))?.let { result += it }
+        }
+        return result
+    }
+
+    private suspend fun detectSpeedRun(now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val songs = eventDao.getSongsWithMinPlays(50)
+
+        for (song in songs) {
+            val type = "FLEX_SPEED_RUN"
+            val entityKey = "speedrun_${song.songId}"
+            if (momentDao.existsByTypeAndKey(type, entityKey)) continue
+
+            val fiftiethPlayAt = eventDao.getNthPlayTimestamp(song.songId, 49) ?: continue
+            val daysTaken = ((fiftiethPlayAt - song.firstHeardAt) / 86_400_000L).toInt()
+            if (daysTaken > 7) continue
+
+            val rank = eventDao.getSongRankByPlayCountSuspend(song.songId)
+            val daysAgo = ((now - song.firstHeardAt) / 86_400_000L).toInt()
+
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "days" to "${daysTaken.coerceAtLeast(1)}",
+                "rank" to "$rank",
+                "daysAgo" to "$daysAgo"
+            )
+            val copy = MomentCopywriter.generate(type, song.title, rawStats, copyVariant)
+            persistIfNew(Moment(
+                type = type,
+                entityKey = entityKey,
+                triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
+                songId = song.songId,
+                statLines = copy.statLines,
+                imageUrl = song.albumArtUrl,
+                entityName = song.title,
+                copyVariant = copyVariant
+            ))?.let { result += it }
+        }
+        return result
+    }
+
+    private suspend fun detectPowerHour(todayStart: Long, now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val events = eventDao.getOrderedSongArtistEventsSuspend(todayStart)
+        if (events.size < 15) return result
+
+        val todayDate = LocalDate.now(ZoneId.systemDefault()).toString()
+        val type = "FLEX_POWER_HOUR"
+        val entityKey = "phour_$todayDate"
+        if (momentDao.existsByTypeAndKey(type, entityKey)) return result
+
+        var bestCount = 0
+        var bestStartIdx = 0
+        for (i in events.indices) {
+            val windowEnd = events[i].startedAt + 3_600_000L
+            var count = 0
+            for (j in i until events.size) {
+                if (events[j].startedAt <= windowEnd) count++ else break
+            }
+            if (count > bestCount) {
+                bestCount = count
+                bestStartIdx = i
+            }
+        }
+
+        if (bestCount < 15) return result
+
+        val peakStartMs = events[bestStartIdx].startedAt
+        val zone = ZoneId.systemDefault()
+        val peakTime = java.time.Instant.ofEpochMilli(peakStartMs).atZone(zone).toLocalTime()
+        val peakHour = peakTime.hour
+        val peakLabel = String.format("%d:%02d%s",
+            if (peakHour % 12 == 0) 12 else peakHour % 12,
+            peakTime.minute,
+            if (peakHour < 12) "am" else "pm"
+        )
+
+        val seconds = (3600 / bestCount)
+
+        val copyVariant = momentDao.countByType(type)
+        val rawStats = mapOf<String, Any>(
+            "count" to "$bestCount",
+            "seconds" to "$seconds",
+            "peakHour" to peakLabel
+        )
+        val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+        persistIfNew(Moment(
+            type = type,
+            entityKey = entityKey,
+            triggeredAt = now,
+            title = copy.title,
+            description = copy.description,
+            statLines = copy.statLines,
+            copyVariant = copyVariant
+        ))?.let { result += it }
+
+        return result
+    }
+
+    private suspend fun detectAfterHours(now: Long): List<Moment> {
+        val result = mutableListOf<Moment>()
+        val thirtyDaysAgo = now - 30L * 24 * 3600 * 1000
+        val afterHoursDays = eventDao.getAfterHoursListeningByDaySuspend(thirtyDaysAgo)
+        val threeHoursMs = 3 * 3_600_000L
+
+        for (dayData in afterHoursDays) {
+            if (dayData.nightMs < threeHoursMs) continue
+
+            val type = "FLEX_AFTER_HOURS"
+            val entityKey = "afterhrs_${dayData.day}"
+            if (momentDao.existsByTypeAndKey(type, entityKey)) continue
+
+            val duration = formatDuration(dayData.nightMs)
+            val songCount = (dayData.nightMs / 210_000L).toInt().coerceAtLeast(1)
+
+            val peakHour = "2am"
+
+            val copyVariant = momentDao.countByType(type)
+            val rawStats = mapOf<String, Any>(
+                "duration" to duration,
+                "songCount" to "$songCount",
+                "peakHour" to peakHour
+            )
+            val copy = MomentCopywriter.generate(type, null, rawStats, copyVariant)
+            persistIfNew(Moment(
+                type = type,
+                entityKey = entityKey,
+                triggeredAt = now,
+                title = copy.title,
+                description = copy.description,
+                statLines = copy.statLines,
+                copyVariant = copyVariant
+            ))?.let { result += it }
+        }
+        return result
     }
 
     private fun startOfDay(epochMs: Long): Long {

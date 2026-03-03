@@ -303,7 +303,7 @@ class AllMomentsViewModel @Inject constructor(
                 "artist1Line" to "${a0?.name ?: "Radiohead"}: 8h", "artist2Line" to "${a1?.name ?: "Coldplay"}: 5h",
                 "overlap" to "0 shared sessions"))
 
-        // ── Deeper Insight (4) ──────────────────────────────────
+        // ── Deeper Insight (7) ──────────────────────────────────
         result += behavioralMoment(-110, "BEHAVIORAL_GROWER", s2?.title ?: "Slow Dancer",
             mapOf("totalPlays" to "67", "earlyPlays" to "3", "recentPlays" to "28"),
             songId = s2?.songId, imageUrl = s2?.albumArtUrl ?: songArt)
@@ -323,6 +323,34 @@ class AllMomentsViewModel @Inject constructor(
         result += behavioralMoment(-115, "BEHAVIORAL_ARTIST_MARATHON", a0?.name ?: "Radiohead",
             mapOf("duration" to "2h 14m", "songCount" to "31", "noInterrupt" to "no interruptions"),
             imageUrl = a0?.imageUrl ?: artistArt)
+        result += behavioralMoment(-116, "BEHAVIORAL_ONE_HIT_WONDER", s0?.title ?: "Mr. Brightside",
+            mapOf("plays" to "${s0?.playCount ?: 67}", "pct" to "94", "artistName" to (a0?.name ?: "The Killers"), "otherCount" to "4"),
+            songId = s0?.songId, imageUrl = s0?.albumArtUrl ?: songArt)
+        result += behavioralMoment(-117, "BEHAVIORAL_CLOCK_WORK", null,
+            mapOf("matchingDays" to "11", "avgTime" to "8:15am", "window" to "30min"))
+        result += behavioralMoment(-118, "BEHAVIORAL_ANTHEM", s0?.title ?: "Espresso",
+            mapOf("plays" to "34", "pct" to "31", "rank" to "2"),
+            songId = s0?.songId, imageUrl = s0?.albumArtUrl ?: songArt)
+
+        // ── Flex / Shareable (8) ──────────────────────────────────
+        result += behavioralMoment(-119, "FLEX_BIGGEST_MONTH", null,
+            mapOf("duration" to "47h 12m", "prevBest" to "39h 44m", "songCount" to "312"))
+        result += behavioralMoment(-120, "FLEX_LOOP", s0?.title ?: "Mr. Brightside",
+            mapOf("plays" to "23", "interval" to "26m", "allTimePlays" to "${s0?.playCount ?: 89}"),
+            songId = s0?.songId, imageUrl = s0?.albumArtUrl ?: songArt)
+        result += behavioralMoment(-121, "FLEX_COLLECTOR_1000", null,
+            mapOf("count" to "1,000", "artistCount" to "142", "totalHours" to "387"))
+        result += behavioralMoment(-122, "FLEX_COLLECTOR_2000", null,
+            mapOf("count" to "2,000", "artistCount" to "298", "totalHours" to "812"))
+        result += behavioralMoment(-123, "FLEX_COLLECTOR_5000", null,
+            mapOf("count" to "5,000", "artistCount" to "614", "totalHours" to "2,041"))
+        result += behavioralMoment(-124, "FLEX_SPEED_RUN", s1?.title ?: "Espresso",
+            mapOf("days" to "4", "rank" to "3", "daysAgo" to "12"),
+            songId = s1?.songId, imageUrl = s1?.albumArtUrl ?: songArt)
+        result += behavioralMoment(-125, "FLEX_POWER_HOUR", null,
+            mapOf("count" to "19", "seconds" to "189", "peakHour" to "2:30pm"))
+        result += behavioralMoment(-126, "FLEX_AFTER_HOURS", null,
+            mapOf("duration" to "3h 41m", "songCount" to "63", "peakHour" to "2am"))
 
         return result
     }

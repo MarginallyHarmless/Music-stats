@@ -96,6 +96,16 @@ data class MonthlyPlays(
     val playCount: Int
 )
 
+data class DailyFirstEvent(
+    val day: String,
+    val firstStartedAt: Long
+)
+
+data class MonthlyListening(
+    val monthKey: String,
+    val totalMs: Long
+)
+
 @Dao
 interface ListeningEventDao {
 
@@ -771,4 +781,59 @@ interface ListeningEventDao {
         LIMIT :limit
     """)
     suspend fun getTopArtistInTimeWindow(since: Long, hourStart: Int, hourEnd: Int, limit: Int): List<ArtistPlayStats>
+
+    // First listening event timestamp per day (for Clock Work detection)
+    @Query("""
+        SELECT strftime('%Y-%m-%d', startedAt / 1000, 'unixepoch', 'localtime') AS day,
+               MIN(startedAt) AS firstStartedAt
+        FROM listening_events
+        WHERE completed = 1 AND startedAt >= :since
+        GROUP BY day
+        ORDER BY day ASC
+    """)
+    suspend fun getFirstEventTimestampPerDay(since: Long): List<DailyFirstEvent>
+
+    // Song play counts for a specific artist (for One-Hit Wonder detection)
+    @Query("""
+        SELECT e.songId, s.title, s.artist, s.albumArtUrl,
+               SUM(e.durationMs) AS totalDurationMs,
+               COUNT(*) AS playCount
+        FROM listening_events e
+        JOIN songs s ON e.songId = s.id
+        WHERE e.completed = 1 AND s.artist = :artist
+        GROUP BY e.songId
+        ORDER BY playCount DESC
+    """)
+    suspend fun getSongPlayCountsByArtistSuspend(artist: String): List<SongPlayStats>
+
+    // Monthly listening totals (for Biggest Month / Top 1%)
+    @Query("""
+        SELECT strftime('%Y-%m', startedAt / 1000, 'unixepoch', 'localtime') AS monthKey,
+               COALESCE(SUM(durationMs), 0) AS totalMs
+        FROM listening_events
+        WHERE completed = 1 AND startedAt >= :since
+        GROUP BY monthKey
+        ORDER BY monthKey ASC
+    """)
+    suspend fun getMonthlyListeningTotalsSuspend(since: Long): List<MonthlyListening>
+
+    // Nth completed play timestamp for a song (for Speed Run)
+    @Query("""
+        SELECT startedAt FROM listening_events
+        WHERE songId = :songId AND completed = 1
+        ORDER BY startedAt ASC
+        LIMIT 1 OFFSET :offset
+    """)
+    suspend fun getNthPlayTimestamp(songId: Long, offset: Int): Long?
+
+    // After-hours listening (midnight to 6am) grouped by day (for After Hours)
+    @Query("""
+        SELECT strftime('%Y-%m-%d', startedAt / 1000, 'unixepoch', 'localtime') AS day,
+               COALESCE(SUM(durationMs), 0) AS nightMs
+        FROM listening_events
+        WHERE completed = 1 AND startedAt >= :since
+        AND CAST(strftime('%H', startedAt / 1000, 'unixepoch', 'localtime') AS INTEGER) < 6
+        GROUP BY day
+    """)
+    suspend fun getAfterHoursListeningByDaySuspend(since: Long): List<DayNightListening>
 }
