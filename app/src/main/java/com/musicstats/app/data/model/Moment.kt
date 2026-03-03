@@ -24,5 +24,6 @@ data class Moment(
     val entityName: String? = null,
     val tier: String = "BRONZE",           // "BRONZE", "SILVER", or "GOLD"
     val isPersonalBest: Boolean = false,
-    val copyVariant: Int = 0               // 0 = first time this type was triggered
+    val copyVariant: Int = 0,              // 0 = first time this type was triggered
+    val releasedAt: Long? = null
 )

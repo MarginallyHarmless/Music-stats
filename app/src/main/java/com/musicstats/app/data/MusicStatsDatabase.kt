@@ -18,7 +18,7 @@ import com.musicstats.app.data.model.Song
 @TypeConverters(Converters::class)
 @Database(
     entities = [Song::class, Artist::class, ListeningEvent::class, Moment::class],
-    version = 16,
+    version = 17,
     exportSchema = false
 )
 abstract class MusicStatsDatabase : RoomDatabase() {
@@ -206,6 +206,13 @@ abstract class MusicStatsDatabase : RoomDatabase() {
         val MIGRATION_15_16 = object : Migration(15, 16) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("DELETE FROM moments")
+            }
+        }
+
+        val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE moments ADD COLUMN releasedAt INTEGER DEFAULT NULL")
+                db.execSQL("UPDATE moments SET releasedAt = triggeredAt")
             }
         }
     }
