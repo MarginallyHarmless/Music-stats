@@ -17,6 +17,7 @@ import com.musicstats.app.ui.library.LibraryScreen
 import com.musicstats.app.ui.library.SongDetailScreen
 import com.musicstats.app.ui.onboarding.OnboardingScreen
 import com.musicstats.app.ui.settings.SettingsScreen
+import com.musicstats.app.BuildConfig
 import com.musicstats.app.ui.debug.DebugScreen
 import com.musicstats.app.ui.challenges.ChallengeHistoryScreen
 import com.musicstats.app.ui.moments.AllMomentsScreen
@@ -60,8 +61,10 @@ fun NavGraph(navController: NavHostController, startDestination: String, modifie
         composable("settings") {
             SettingsScreen()
         }
-        composable("debug") {
-            DebugScreen()
+        if (BuildConfig.DEBUG) {
+            composable("debug") {
+                DebugScreen()
+            }
         }
         composable(
             "song/{songId}",
