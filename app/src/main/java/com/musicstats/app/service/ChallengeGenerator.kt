@@ -14,39 +14,58 @@ class ChallengeGenerator @Inject constructor(
     suspend fun generateWeeklyChallenges(): List<Challenge> {
         val weekStart = WeekUtils.currentWeekStart()
 
-        if (challengeDao.countForWeek(weekStart) > 0) return emptyList()
+        if (challengeDao.countForWeek(weekStart) > 0) {
+            DebugLog.log(DebugEventType.STATE, "Challenges: already generated for this week")
+            return emptyList()
+        }
 
         val totalMs = eventDao.getTotalListeningTimeMsSuspend()
-        if (totalMs < MomentPriority.GATE_MS) return emptyList()
+        if (totalMs < MomentPriority.GATE_MS) {
+            DebugLog.log(DebugEventType.STATE, "Challenges: gate not met (${totalMs / 3_600_000f}h / ${MomentPriority.GATE_HOURS}h)")
+            return emptyList()
+        }
 
         val prevWeekStart = WeekUtils.previousWeekStart()
-        val twoWeeksAgo = prevWeekStart - 7L * 24 * 3600 * 1000
-        val oldDataCount = eventDao.getPlayCountBetweenSuspend(twoWeeksAgo, prevWeekStart)
-        if (oldDataCount == 0) return emptyList()
+        val preWeekDataCount = eventDao.getPlayCountBetweenSuspend(prevWeekStart, weekStart)
+        if (preWeekDataCount == 0) {
+            DebugLog.log(DebugEventType.STATE, "Challenges: need at least 1 week of data (0 plays last week)")
+            return emptyList()
+        }
 
         val lastWeekEnd = weekStart
         val lastWeekStart = prevWeekStart
 
+        DebugLog.log(DebugEventType.STATE, "Challenges: running 14 generators against last week data")
+
         val cooldownTypes = challengeDao.getTypesForWeek(prevWeekStart).toSet()
 
-        val candidates = listOfNotNull(
-            generateDiscoveryStretch(lastWeekStart, lastWeekEnd, weekStart),
-            generateGenreExplorer(lastWeekStart, lastWeekEnd, weekStart),
-            generateArtistDeepDive(lastWeekStart, lastWeekEnd, weekStart),
-            generateRediscovery(lastWeekStart, lastWeekEnd, weekStart),
-            generateConsistency(lastWeekStart, lastWeekEnd, weekStart),
-            generateTimeStretch(lastWeekStart, lastWeekEnd, weekStart),
-            generateNoSkipRun(lastWeekStart, lastWeekEnd, weekStart),
-            generateNightOwlEarlyBird(lastWeekStart, lastWeekEnd, weekStart),
-            generateMarathonSession(lastWeekStart, lastWeekEnd, weekStart),
-            generateArtistVariety(lastWeekStart, lastWeekEnd, weekStart),
-            generateLoyaltyTest(lastWeekStart, lastWeekEnd, weekStart),
-            generateSourceSwap(lastWeekStart, lastWeekEnd, weekStart),
-            generateOldFavorite(lastWeekStart, lastWeekEnd, weekStart),
-            generateWeekendWarrior(lastWeekStart, lastWeekEnd, weekStart),
-        ).filter { it.type !in cooldownTypes }
+        val allResults = listOf(
+            "DISCOVERY_STRETCH" to generateDiscoveryStretch(lastWeekStart, lastWeekEnd, weekStart),
+            "GENRE_EXPLORER" to generateGenreExplorer(lastWeekStart, lastWeekEnd, weekStart),
+            "ARTIST_DEEP_DIVE" to generateArtistDeepDive(lastWeekStart, lastWeekEnd, weekStart),
+            "REDISCOVERY" to generateRediscovery(lastWeekStart, lastWeekEnd, weekStart),
+            "CONSISTENCY" to generateConsistency(lastWeekStart, lastWeekEnd, weekStart),
+            "TIME_STRETCH" to generateTimeStretch(lastWeekStart, lastWeekEnd, weekStart),
+            "NO_SKIP_RUN" to generateNoSkipRun(lastWeekStart, lastWeekEnd, weekStart),
+            "NIGHT_OWL" to generateNightOwlEarlyBird(lastWeekStart, lastWeekEnd, weekStart),
+            "MARATHON" to generateMarathonSession(lastWeekStart, lastWeekEnd, weekStart),
+            "ARTIST_VARIETY" to generateArtistVariety(lastWeekStart, lastWeekEnd, weekStart),
+            "LOYALTY_TEST" to generateLoyaltyTest(lastWeekStart, lastWeekEnd, weekStart),
+            "SOURCE_SWAP" to generateSourceSwap(lastWeekStart, lastWeekEnd, weekStart),
+            "OLD_FAVORITE" to generateOldFavorite(lastWeekStart, lastWeekEnd, weekStart),
+            "WEEKEND_WARRIOR" to generateWeekendWarrior(lastWeekStart, lastWeekEnd, weekStart),
+        )
 
-        if (candidates.isEmpty()) return emptyList()
+        val hit = allResults.filter { it.second != null }.map { it.first }
+        val miss = allResults.filter { it.second == null }.map { it.first }
+        DebugLog.log(DebugEventType.STATE, "Challenges: ${hit.size} hit [${hit.joinToString()}], ${miss.size} miss")
+
+        val candidates = allResults.mapNotNull { it.second }.filter { it.type !in cooldownTypes }
+
+        if (candidates.isEmpty()) {
+            DebugLog.log(DebugEventType.STATE, "Challenges: 0 candidates after cooldown filter")
+            return emptyList()
+        }
 
         val count = if (candidates.size >= 3) 3 else candidates.size.coerceAtMost(2)
         val selected = candidates.shuffled().take(count)

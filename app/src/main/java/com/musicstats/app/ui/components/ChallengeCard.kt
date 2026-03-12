@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.musicstats.app.data.model.Challenge
@@ -37,14 +38,16 @@ fun ChallengeCard(
         label = "challenge_progress"
     )
 
+    val greenColor = Color(0xFF4CAF50)
+
     Card(
         onClick = onTap,
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = if (challenge.completed)
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                greenColor.copy(alpha = 0.15f)
             else
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
         )
     ) {
         Column(
@@ -62,34 +65,49 @@ fun ChallengeCard(
                     text = challenge.title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = if (challenge.completed) greenColor
+                        else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
                 if (challenge.completed) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "Completed",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Completed",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = greenColor
+                        )
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Completed",
+                            tint = greenColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
 
             Text(
                 text = challenge.description,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (challenge.completed) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    else MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            if (!challenge.completed) {
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                )
-            }
+            LinearProgressIndicator(
+                progress = { if (challenge.completed) 1f else progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp)),
+                color = if (challenge.completed) greenColor
+                    else MaterialTheme.colorScheme.primary,
+                trackColor = if (challenge.completed) greenColor.copy(alpha = 0.1f)
+                    else MaterialTheme.colorScheme.surfaceVariant
+            )
         }
     }
 }
