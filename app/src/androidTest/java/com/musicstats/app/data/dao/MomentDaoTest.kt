@@ -39,7 +39,8 @@ class MomentDaoTest {
             entityKey = "42:100",
             triggeredAt = 1000L,
             title = "100 plays",
-            description = "You've played Test Song 100 times"
+            description = "You've played Test Song 100 times",
+            releasedAt = System.currentTimeMillis()
         )
         dao.insert(moment)
         val all = dao.getAllMoments().first()
@@ -51,7 +52,8 @@ class MomentDaoTest {
     fun duplicateInsertIsIgnored() = runTest {
         val moment = Moment(
             type = "SONG_PLAYS_100", entityKey = "42:100", triggeredAt = 1000L,
-            title = "100 plays", description = "desc"
+            title = "100 plays", description = "desc",
+            releasedAt = System.currentTimeMillis()
         )
         dao.insert(moment)
         dao.insert(moment.copy(triggeredAt = 2000L)) // same type+entityKey
@@ -60,10 +62,11 @@ class MomentDaoTest {
 
     @Test
     fun unseenMomentsReturnsOnlyUnseen() = runTest {
+        val now = System.currentTimeMillis()
         dao.insert(Moment(type = "A", entityKey = "1", triggeredAt = 1000L,
-            title = "T", description = "D", seenAt = null))
+            title = "T", description = "D", seenAt = null, releasedAt = now))
         dao.insert(Moment(type = "B", entityKey = "2", triggeredAt = 2000L,
-            title = "T", description = "D", seenAt = 1001L))
+            title = "T", description = "D", seenAt = 1001L, releasedAt = now))
         val unseen = dao.getUnseenMoments().first()
         assertEquals(1, unseen.size)
         assertEquals("A", unseen[0].type)
@@ -72,7 +75,7 @@ class MomentDaoTest {
     @Test
     fun markSeenUpdatesTimestamp() = runTest {
         dao.insert(Moment(type = "A", entityKey = "1", triggeredAt = 1000L,
-            title = "T", description = "D"))
+            title = "T", description = "D", releasedAt = System.currentTimeMillis()))
         val id = dao.getAllMoments().first()[0].id
         dao.markSeen(id, 9999L)
         val moment = dao.getAllMoments().first()[0]
@@ -91,7 +94,7 @@ class MomentDaoTest {
     @Test
     fun markSharedUpdatesTimestamp() = runTest {
         dao.insert(Moment(type = "A", entityKey = "1", triggeredAt = 1000L,
-            title = "T", description = "D"))
+            title = "T", description = "D", releasedAt = System.currentTimeMillis()))
         val id = dao.getAllMoments().first()[0].id
         dao.markShared(id, 8888L)
         val moment = dao.getAllMoments().first()[0]
@@ -101,9 +104,10 @@ class MomentDaoTest {
 
     @Test
     fun getRecentMomentsRespectsLimit() = runTest {
+        val now = System.currentTimeMillis()
         repeat(5) { i ->
             dao.insert(Moment(type = "TYPE_$i", entityKey = "$i", triggeredAt = i * 1000L,
-                title = "T", description = "D"))
+                title = "T", description = "D", releasedAt = now))
         }
         val recent = dao.getRecentMoments(3).first()
         assertEquals(3, recent.size)
@@ -115,13 +119,26 @@ class MomentDaoTest {
 
     @Test
     fun getUnseenCountTracksUnseenMoments() = runTest {
+        val now = System.currentTimeMillis()
         dao.insert(Moment(type = "A", entityKey = "1", triggeredAt = 1000L,
-            title = "T", description = "D"))
+            title = "T", description = "D", releasedAt = now))
         dao.insert(Moment(type = "B", entityKey = "2", triggeredAt = 2000L,
-            title = "T", description = "D"))
+            title = "T", description = "D", releasedAt = now))
         assertEquals(2, dao.getUnseenCount().first())
         val id = dao.getAllMoments().first()[0].id
         dao.markSeen(id, 9999L)
         assertEquals(1, dao.getUnseenCount().first())
+    }
+
+    @Test
+    fun unreleasedMomentsAreHiddenFromDisplayQueries() = runTest {
+        val now = System.currentTimeMillis()
+        dao.insert(Moment(type = "A", entityKey = "1", triggeredAt = 1000L,
+            title = "T", description = "D", releasedAt = now))
+        dao.insert(Moment(type = "B", entityKey = "2", triggeredAt = 2000L,
+            title = "T", description = "D", releasedAt = null))
+        val all = dao.getAllMoments().first()
+        assertEquals(1, all.size)
+        assertEquals("A", all[0].type)
     }
 }

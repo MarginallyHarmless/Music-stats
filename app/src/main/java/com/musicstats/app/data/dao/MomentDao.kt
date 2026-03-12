@@ -13,13 +13,13 @@ interface MomentDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(moment: Moment): Long
 
-    @Query("SELECT * FROM moments WHERE type != 'ARTIST_UNLOCKED' ORDER BY triggeredAt DESC")
+    @Query("SELECT * FROM moments WHERE type != 'ARTIST_UNLOCKED' AND releasedAt IS NOT NULL ORDER BY releasedAt DESC")
     fun getAllMoments(): Flow<List<Moment>>
 
-    @Query("SELECT * FROM moments WHERE seenAt IS NULL ORDER BY triggeredAt DESC")
+    @Query("SELECT * FROM moments WHERE seenAt IS NULL AND releasedAt IS NOT NULL ORDER BY releasedAt DESC")
     fun getUnseenMoments(): Flow<List<Moment>>
 
-    @Query("SELECT * FROM moments WHERE type != 'ARTIST_UNLOCKED' ORDER BY triggeredAt DESC LIMIT :limit")
+    @Query("SELECT * FROM moments WHERE type != 'ARTIST_UNLOCKED' AND releasedAt IS NOT NULL ORDER BY releasedAt DESC LIMIT :limit")
     fun getRecentMoments(limit: Int): Flow<List<Moment>>
 
     @Query("UPDATE moments SET seenAt = :timestamp WHERE id = :id")
@@ -31,7 +31,7 @@ interface MomentDao {
     @Query("SELECT EXISTS(SELECT 1 FROM moments WHERE type = :type AND entityKey = :entityKey)")
     suspend fun existsByTypeAndKey(type: String, entityKey: String): Boolean
 
-    @Query("SELECT COUNT(*) FROM moments WHERE seenAt IS NULL AND type != 'ARTIST_UNLOCKED'")
+    @Query("SELECT COUNT(*) FROM moments WHERE seenAt IS NULL AND type != 'ARTIST_UNLOCKED' AND releasedAt IS NOT NULL")
     fun getUnseenCount(): Flow<Int>
 
     @Query("UPDATE moments SET imageUrl = (SELECT imageUrl FROM artists WHERE artists.id = moments.artistId) WHERE artistId IS NOT NULL AND imageUrl IS NULL")
@@ -42,4 +42,16 @@ interface MomentDao {
 
     @Query("DELETE FROM moments WHERE type LIKE :typePattern AND (description LIKE '%? %' OR description LIKE '%?.')")
     suspend fun deleteStaleByTypePattern(typePattern: String): Int
+
+    @Query("SELECT * FROM moments WHERE releasedAt IS NULL ORDER BY triggeredAt DESC")
+    suspend fun getUnreleasedMoments(): List<Moment>
+
+    @Query("SELECT COUNT(*) FROM moments WHERE releasedAt >= :dayStartMs AND releasedAt < :dayEndMs")
+    suspend fun countReleasedInRange(dayStartMs: Long, dayEndMs: Long): Int
+
+    @Query("UPDATE moments SET releasedAt = :releasedAt WHERE id = :id")
+    suspend fun setReleasedAt(id: Long, releasedAt: Long)
+
+    @Query("DELETE FROM moments WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<Long>)
 }

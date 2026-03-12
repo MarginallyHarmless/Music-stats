@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.musicstats.app.BuildConfig
 import com.musicstats.app.ui.theme.LocalAlbumPalette
 
 enum class BottomNavItem(val route: String, val label: String, val icon: ImageVector) {
@@ -30,7 +31,10 @@ fun BottomNavBar(currentRoute: String?, onNavigate: (String) -> Unit) {
     NavigationBar(
         containerColor = Color(0xFF0A0A0F).copy(alpha = 0.95f)
     ) {
-        BottomNavItem.entries.forEach { item ->
+        val items = BottomNavItem.entries.let { entries ->
+            if (BuildConfig.DEBUG) entries.toList() else entries.filter { it != BottomNavItem.Debug }
+        }
+        items.forEach { item ->
             NavigationBarItem(
                 selected = currentRoute == item.route,
                 onClick = { onNavigate(item.route) },

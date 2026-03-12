@@ -57,7 +57,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import coil3.compose.AsyncImage
 import com.musicstats.app.service.MusicNotificationListener
+import com.musicstats.app.data.model.Challenge
 import com.musicstats.app.ui.components.AuroraBackground
+import com.musicstats.app.ui.components.ChallengeCard
 import com.musicstats.app.ui.components.GradientCard
 import com.musicstats.app.ui.components.ListeningTimeChart
 import com.musicstats.app.ui.components.MomentShareCard
@@ -76,6 +78,7 @@ fun HomeScreen(
     onSongClick: (Long) -> Unit = {},
     onArtistClick: (String) -> Unit = {},
     onSeeAllMoments: () -> Unit = {},
+    onSeeAllChallenges: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val todayMs by viewModel.todayListeningTimeMs.collectAsState()
@@ -89,6 +92,9 @@ fun HomeScreen(
     val topSongs by viewModel.topSongsThisWeek.collectAsState()
     val streak by viewModel.currentStreak.collectAsState()
     val recentMoments by viewModel.recentMoments.collectAsState()
+    val momentGateState by viewModel.momentGateState.collectAsState()
+    val activeChallenges by viewModel.activeChallenges.collectAsState()
+    var selectedChallenge by remember { mutableStateOf<Challenge?>(null) }
 
     // Live ticker: adds current session elapsed time to DB total
     var liveElapsed by remember { mutableLongStateOf(0L) }
@@ -117,6 +123,7 @@ fun HomeScreen(
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
         viewModel.detectMomentsOnOpen()
+        viewModel.refreshChallengesOnOpen()
     }
 
     AuroraBackground {
@@ -447,8 +454,51 @@ fun HomeScreen(
                     viewModel.markMomentShared(moment.id)
                 }
             },
-            onSeeAll = onSeeAllMoments
+            onSeeAll = onSeeAllMoments,
+            gateState = momentGateState
         )
+
+        // 6b. Challenges strip
+        if (activeChallenges.isNotEmpty()) {
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "This Week's Challenges",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    androidx.compose.material3.TextButton(onClick = onSeeAllChallenges) {
+                        Text("See all", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    activeChallenges.forEach { challenge ->
+                        ChallengeCard(
+                            challenge = challenge,
+                            onTap = { selectedChallenge = challenge }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+        }
+
+        selectedChallenge?.let { challenge ->
+            ChallengeDetailSheet(
+                challenge = challenge,
+                onDismiss = { selectedChallenge = null }
+            )
+        }
 
         // 7. Weekly chart section
         SectionHeader("This Week")

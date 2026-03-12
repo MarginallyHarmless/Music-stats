@@ -8,17 +8,19 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.musicstats.app.data.Converters
 import com.musicstats.app.data.dao.ArtistDao
 import com.musicstats.app.data.dao.ListeningEventDao
+import com.musicstats.app.data.dao.ChallengeDao
 import com.musicstats.app.data.dao.MomentDao
 import com.musicstats.app.data.dao.SongDao
 import com.musicstats.app.data.model.Artist
 import com.musicstats.app.data.model.ListeningEvent
+import com.musicstats.app.data.model.Challenge
 import com.musicstats.app.data.model.Moment
 import com.musicstats.app.data.model.Song
 
 @TypeConverters(Converters::class)
 @Database(
-    entities = [Song::class, Artist::class, ListeningEvent::class, Moment::class],
-    version = 16,
+    entities = [Song::class, Artist::class, ListeningEvent::class, Moment::class, Challenge::class],
+    version = 18,
     exportSchema = false
 )
 abstract class MusicStatsDatabase : RoomDatabase() {
@@ -26,6 +28,7 @@ abstract class MusicStatsDatabase : RoomDatabase() {
     abstract fun artistDao(): ArtistDao
     abstract fun listeningEventDao(): ListeningEventDao
     abstract fun momentDao(): MomentDao
+    abstract fun challengeDao(): ChallengeDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -206,6 +209,36 @@ abstract class MusicStatsDatabase : RoomDatabase() {
         val MIGRATION_15_16 = object : Migration(15, 16) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("DELETE FROM moments")
+            }
+        }
+
+        val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE moments ADD COLUMN releasedAt INTEGER DEFAULT NULL")
+                db.execSQL("UPDATE moments SET releasedAt = triggeredAt")
+            }
+        }
+
+        val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS challenges (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        type TEXT NOT NULL,
+                        weekStart INTEGER NOT NULL,
+                        title TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        targetValue REAL NOT NULL,
+                        currentValue REAL NOT NULL DEFAULT 0,
+                        completed INTEGER NOT NULL DEFAULT 0,
+                        completedAt INTEGER,
+                        generatedAt INTEGER NOT NULL,
+                        metadata TEXT
+                    )
+                """)
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_challenges_type_weekStart` ON `challenges` (`type`, `weekStart`)"
+                )
             }
         }
     }

@@ -6,6 +6,7 @@ import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import com.musicstats.app.data.MusicStatsDatabase
 import com.musicstats.app.data.dao.ArtistDao
+import com.musicstats.app.data.dao.ChallengeDao
 import com.musicstats.app.data.dao.ListeningEventDao
 import com.musicstats.app.data.dao.MomentDao
 import com.musicstats.app.data.dao.SongDao
@@ -44,6 +45,8 @@ object DatabaseModule {
                 MusicStatsDatabase.MIGRATION_13_14,
                 MusicStatsDatabase.MIGRATION_14_15,
                 MusicStatsDatabase.MIGRATION_15_16,
+                MusicStatsDatabase.MIGRATION_16_17,
+                MusicStatsDatabase.MIGRATION_17_18,
             )
             .build()
     }
@@ -60,6 +63,9 @@ object DatabaseModule {
 
     @Provides
     fun provideMomentDao(database: MusicStatsDatabase): MomentDao = database.momentDao()
+
+    @Provides
+    fun provideChallengeDao(database: MusicStatsDatabase): ChallengeDao = database.challengeDao()
 
     @Provides
     @Singleton
