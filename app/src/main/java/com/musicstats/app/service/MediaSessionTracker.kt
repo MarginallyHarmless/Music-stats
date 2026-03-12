@@ -227,6 +227,17 @@ class MediaSessionTracker @Inject constructor(
     @Synchronized
     fun onPlaybackStateChanged(state: PlaybackState?, sourceApp: String, scope: CoroutineScope) {
         if (sourceApp in ignoredApps) return
+
+        // Ignore stale playback states (e.g. YouTube Music reporting PLAYING after being idle).
+        // lastPositionUpdateTime uses SystemClock.elapsedRealtime().
+        if (state != null && state.state == PlaybackState.STATE_PLAYING && !isPlaying) {
+            val stateAge = android.os.SystemClock.elapsedRealtime() - state.lastPositionUpdateTime
+            if (stateAge > 10_000) {
+                DebugLog.log(DebugEventType.REJECT, "Stale PLAYING from $sourceApp (age=${stateAge}ms)")
+                return
+            }
+        }
+
         val wasPlaying = isPlaying
         isPlaying = state?.state == PlaybackState.STATE_PLAYING
 
